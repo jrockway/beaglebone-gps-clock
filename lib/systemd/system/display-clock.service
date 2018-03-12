@@ -1,0 +1,10 @@
+[Unit]
+Description=Display clock
+After=ntpd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/display-clock
+
+[Install]
+WantedBy=multi-user.target
