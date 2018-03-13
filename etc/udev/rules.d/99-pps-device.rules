@@ -1,0 +1,2 @@
+KERNEL=="pps0", SUBSYSTEM=="pps", TAG+="systemd"
+
