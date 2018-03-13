@@ -1,0 +1,2 @@
+KERNEL=="ttyS4", SUBSYSTEM=="tty", SYMLINK+="gps0"
+
