@@ -1,6 +1,5 @@
 [Unit]
 Description=Display clock
-After=ntpd.service
 
 [Service]
 Type=simple
