@@ -6,24 +6,23 @@
 #include <dt-bindings/pinctrl/am33xx.h>
 
 / {
-	compatible = "ti,beaglebone", "ti,beaglebone-black", "ti,beaglebone-green";
+        compatible = "ti,beaglebone", "ti,beaglebone-black", "ti,beaglebone-green";
 
-	/* identification */
-	part-number = "CLOCK";
-	version = "00A0";
+        /* identification */
+        part-number = "CLOCK";
+        version = "00A0";
 
-	exclusive-use =
-                      "P9.11", "P9.13", "P9.15", "uart4", // gps and pps
-                      "P9.17", "P9.18", "P9.21", "P9.22", "spi0", // spi display
-                      "P9.19", "P9.20", "i2c2", "P9.12", "P9.14"; // rtc
+        exclusive-use =
+                "P9.11", "P9.13", "P9.15", "uart4", // gps and pps
+                "P9.17", "P9.18", "P9.21", "P9.22", "spi0", // spi display
+                "P9.19", "P9.20", "i2c2", "P9.12", "P9.14"; // rtc
 
-
-	fragment@0 {
-		target = <&ocp>;
-		__overlay__ {
+        fragment@0 {
+                target = <&ocp>;
+                __overlay__ {
                         P9_11_pinmux { status = "disabled"; };
-			P9_13_pinmux { status = "disabled"; };
-    			P9_15_pinmux { status = "disabled"; };
+                        P9_13_pinmux { status = "disabled"; };
+                        P9_15_pinmux { status = "disabled"; };
 
                         P9_17_pinmux { status = "disabled"; };
                         P9_18_pinmux { status = "disabled"; };
@@ -34,15 +33,15 @@
                         P9_20_pinmux { status = "disabled"; };
                         P9_12_pinmux { status = "disabled"; };
                         P9_14_pinmux { status = "disabled"; };
-		};
-	};
+                };
+        };
 
-	fragment@1 {
-		target = <&am33xx_pinmux>;
-		__overlay__ {
+        fragment@1 {
+                target = <&am33xx_pinmux>;
+                __overlay__ {
                         bb_uart4_pins: pinmux_bb_uart4_pins {
                                 pinctrl-single,pins = <
-                                	BONE_P9_13 (PIN_OUTPUT | MUX_MODE6)
+                                        BONE_P9_13 (PIN_OUTPUT | MUX_MODE6)
                                         BONE_P9_11 (PIN_INPUT | MUX_MODE6)
                                 >;
                         };
@@ -80,8 +79,8 @@
                                         BONE_P9_12 (PIN_INPUT_PULLUP | MUX_MODE7)
                                 >;
                         };
-		};
-	};
+                };
+        };
 
         fragment@2 {
                 target = <&uart4>;
@@ -95,7 +94,7 @@
         fragment@3 {
                 target = <&ocp>;
                 __overlay__ {
-		        gps_pps {
+                        gps_pps {
                                 status = "okay";
                                 compatible = "pps-gpio";
                                 pinctrl-names = "default";
@@ -122,13 +121,13 @@
                         pinctrl-names = "default";
                         pinctrl-0 = <&bb_spi0_pins>;
 
-			display@0 {
-			        status = "okay";
-				compatible = "spidev";
-				spi-max-frequency = <10000000>;
-				reg = <0>;
-	                };
-		};
+                        display@0 {
+                                status = "okay";
+                                compatible = "spidev";
+                                spi-max-frequency = <10000000>;
+                                reg = <0>;
+                        };
+                };
         };
 
         fragment@5 {
@@ -142,7 +141,7 @@
                         #size-cells = <0>;
 
                         ds3231: ds3231@51 {
-				status = "okay";
+                                status = "okay";
                                 compatible = "maxim,ds3231";
                                 reg = <0x68>;
                                 #clock-cells = <1>;
@@ -150,13 +149,13 @@
                 };
         };
 
-	fragment@6 {
-		target-path="/";
-		__overlay__ {
-			aliases {
-				rtc0 = "/ocp/i2c@4819c000/ds3231@51";
-				rtc1 = "/ocp/rtc@44e3e000";
-			};
-		};
-	};
+        fragment@6 {
+                target-path="/";
+                __overlay__ {
+                        aliases {
+                                rtc0 = "/ocp/i2c@4819c000/ds3231@51";
+                                rtc1 = "/ocp/rtc@44e3e000";
+                        };
+                };
+        };
 };
