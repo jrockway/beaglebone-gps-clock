@@ -261,6 +261,17 @@ so you can watch that video and learn how to say "coordinated universal time" in
 French as an added bonus.  Either way, time stations are super relaxing to
 listen to, with that nice 1Hz tempo.  My kind of jams.  Enjoy.
 
+## Addenda
+
+To get the time correct after a cold boot, I added a [battery-backed real time
+clock](http://docs.macetech.com/doku.php/chronodot_v2.0) to the i2c bus.  This
+also has a PPS output, and while I don't trust it to be synchronized to UTC
+seconds, the frequency should be pretty accurate.  So I have chrony monitoring
+its 1Hz SQW output, but not using it for time calculations.  A device tree entry
+makes this clock the default hardware clock, so the time will be read from it
+upon a cold boot.  It also measures the temperature inside the clock, which
+might look nice on graphs.
+
 ## Future work
 
 I'd like to get more than just microsecond accuracy, but convincing Linux to do

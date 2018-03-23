@@ -1,0 +1,3 @@
+#!/bin/sh
+
+i2cset -f -y 2 0x68 0x0e 0x00
