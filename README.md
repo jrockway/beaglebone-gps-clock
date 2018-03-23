@@ -272,6 +272,8 @@ makes this clock the default hardware clock, so the time will be read from it
 upon a cold boot.  It also measures the temperature inside the clock, which
 might look nice on graphs.
 
+![RTC](https://raw.githubusercontent.com/jrockway/beaglebone-gps-clock/master/img/rtc.jpg)
+
 ## Future work
 
 I'd like to get more than just microsecond accuracy, but convincing Linux to do
