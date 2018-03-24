@@ -1,15 +1,13 @@
+// Package trimble reads data from a Trimble Resolution-T GPS:
+// http://trl.trimble.com/docushare/dsweb/Get/Document-221342/ResolutionT_UG_2B_54655-05-ENG.pdf
 package main
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"log"
 	"math"
-	"time"
-
-	"github.com/pkg/term"
+	"os/exec"
 )
 
 const (
@@ -25,8 +23,63 @@ const (
 	TSIP_PACKET_TIMING_SUPPLEMENTAL = 0xac
 )
 
-// Read data from a Trimble Resolution-T GPS:
-// http://trl.trimble.com/docushare/dsweb/Get/Document-221342/ResolutionT_UG_2B_54655-05-ENG.pdf
+// Packetizer is an io.Writer that collects TSIP bytes and emits full packets for further processing.
+type Packetizer struct {
+	// Channel C produces TSIP packets, in the format of <id> <packet data> (no TSIP protocol
+	// padding or stuffed DLE bytes).
+	C chan []byte
+
+	buf     []byte
+	fullDLE bool // true if the last byte in buf is actually two DLE bytes
+}
+
+// Write collects TSIP bytes to be packetized.
+func (p *Packetizer) Write(in []byte) (int, error) {
+	for _, b := range in {
+		if b == TSIP_DLE {
+			// A DLE byte indicates that we are about to read <DLE> <id> for a new
+			// packet, <DLE> <ETX> for the end of the packet, or <DLE> <DLE> for a
+			// literal DLE octet in the data.
+
+			if len(p.buf) > 0 && p.buf[len(p.buf)-1] == TSIP_DLE && !p.fullDLE {
+			}
+		}
+
+		if l := len(p.buf); l > 0 && !p.fullDLE && p.buf[l-1] == TSIP_DLE {
+			switch b {
+			case TSIP_ETX:
+			search:
+				for s, c := range p.buf {
+					// Find the first DLE byte and send from there (usually 0).
+					// Honestly this is kind of flaky because there is no
+					// guarantee that TSIP is even in the buffer.  For exmaple,
+					// gpspipe prints JSON to stdout at the beginning and then
+					// switches to TSIP.  There could easily be a <DLE> byte in
+					// that JSON, in which case we confuse the next stage with
+					// garbage data.  But it will resynchronize on the next
+					// packet.
+					if c == TSIP_DLE {
+						p.C <- p.buf[s+1 : l-1]
+						break search
+					}
+				}
+				p.buf = make([]byte, 0)
+				continue
+			case TSIP_DLE:
+				// The last byte was DLE, so don't add another byte, and tell the
+				// next iteration of the loop not to treat the DLE as anything other
+				// than data.
+				p.fullDLE = true
+				continue
+
+			}
+		}
+
+		p.buf = append(p.buf, b)
+		p.fullDLE = false
+	}
+	return len(in), nil
+}
 
 func hexdump(b []byte) {
 	for row := 0; row*16 < len(b); row++ {
@@ -36,48 +89,6 @@ func hexdump(b []byte) {
 		fmt.Printf("\n")
 	}
 	fmt.Printf("\n")
-}
-
-func findPacket(b []byte) (start, end int, id byte, ok bool) {
-	start = -1
-	end = -1
-	id = 0
-	// Packets start with DLE id.  Packets end with DLE ETX.
-
-	for i := 0; i < len(b); i++ {
-		// DLE bytes inside the packet data are doubled.  If we see a lone DLE byte, then
-		// it's a DLE <id> or DLE ETX sequence.
-		//
-		// This protocol is somewhat questionable as nothing stops us from starting our read
-		// in the middle of one of these doubled DLE packets and assuming the next data byte
-		// is the command ID of the next packet.  Sigh.
-		if b[i] == TSIP_DLE {
-			if i+1 >= len(b) {
-				// We don't have enough data to understand this DLE byte.
-				ok = false
-				return
-			}
-
-			if b[i+1] == TSIP_DLE {
-				// Skip over data.
-				i++
-				continue
-			}
-
-			if b[i+1] == TSIP_ETX {
-				end = i + 1
-				ok = true
-				return
-			} else {
-				id = b[i+1]
-				start = i
-				i++
-				continue
-			}
-		}
-	}
-	ok = false
-	return
 }
 
 func parsePacket(id byte, b []byte) {
@@ -181,37 +192,18 @@ func parsePacket(id byte, b []byte) {
 }
 
 func main() {
-	f, err := term.Open("/dev/gps0", term.Speed(9600), term.RawMode)
-	if err != nil {
-		log.Fatal(err)
-	}
+	cmd := exec.Command("gpspipe", "-R")
+	p := new(Packetizer)
+	p.C = make(chan []byte)
+	cmd.Stdout = p
 
-	buf := new(bytes.Buffer)
-	for {
-		avail, err := f.Available()
-		if err != nil {
-			log.Fatalf("available: %v", err)
+	go func() {
+		for packet := range p.C {
+			parsePacket(packet[0], packet[1:])
 		}
-		if avail < 1 {
-			time.Sleep(time.Millisecond)
-			continue
-		}
+	}()
 
-		r := &io.LimitedReader{R: f, N: int64(avail)}
-		if _, err := buf.ReadFrom(r); err != nil {
-			log.Fatal(err)
-		}
-
-	parse:
-		for {
-			data := buf.Bytes()
-			start, end, id, ok := findPacket(data)
-			if ok {
-				parsePacket(id, data[start+2:end-1])
-				buf = bytes.NewBuffer(data[end+1 : len(data)])
-			}
-			break parse
-		}
-
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("running gpspipe: %v", err)
 	}
 }
