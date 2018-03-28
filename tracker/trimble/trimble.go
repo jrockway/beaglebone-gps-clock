@@ -35,7 +35,6 @@ type Packetizer struct {
 
 // Write collects TSIP bytes to be packetized.
 func (p *Packetizer) Write(in []byte) (int, error) {
-	fmt.Printf("got %d bytes\n", len(in))
 	for _, b := range in {
 		if b == TSIP_DLE {
 			// A DLE byte indicates that we are about to read <DLE> <id> for a new
