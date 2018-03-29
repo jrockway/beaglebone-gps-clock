@@ -81,6 +81,20 @@ func TestParsePacket(t *testing.T) {
 			},
 		},
 		{
+			input: "bQ0AAAAAAAAAAAAAAAAAAAAA",
+			want: &Packet{
+				AllInView: &AllInView{
+					Status:     5,
+					AutoFix:    true,
+					PDOP:       0,
+					HDOP:       0,
+					VDOP:       0,
+					TDOP:       0,
+					Satellites: nil,
+				},
+			},
+		},
+		{
 			input: "RwsIwa2ZmgtCNgAAB0INmZoTgAAAABHBrZmaFkIoAAASQiMzMxxCBAAAA4AAAAAeQiAAAAFCQMzN",
 			want: &Packet{
 				SignalLevel: SignalLevels{

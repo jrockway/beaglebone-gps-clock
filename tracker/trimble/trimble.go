@@ -170,7 +170,7 @@ func ParsePacket(b []byte) (result *Packet, err error) {
 
 	switch id {
 	case TSIP_PACKET_ALL_IN_VIEW:
-		if len(b) < 18 {
+		if len(b) < 17 {
 			return result, errors.New("incomplete 'All-in-view satellite selection' packet")
 		}
 
