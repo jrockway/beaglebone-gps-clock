@@ -125,6 +125,14 @@ func readGPSStatus(packets chan []byte, temp chan tempReading, sats chan satelli
 			}
 		}
 
+		if p.TrackingStatus != nil {
+			sats <- satelliteStatus{
+				prn:       int(p.TrackingStatus.PRN),
+				azimuth:   p.TrackingStatus.Azimuth,
+				elevation: p.TrackingStatus.Elevation,
+			}
+		}
+
 		if p.UnknownPacketID != 0 {
 			log.Printf("unknown packet id %#x", p.UnknownPacketID)
 		}

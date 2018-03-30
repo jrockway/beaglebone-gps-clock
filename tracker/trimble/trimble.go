@@ -14,10 +14,11 @@ const (
 	TSIP_DLE = 0x10
 	TSIP_ETX = 0x03
 
-	TSIP_PACKET_SIGNAL             = 0x47
-	TSIP_PACKET_ALL_IN_VIEW        = 0x6d
-	TSIP_PACKET_RAW_MEASUREMENT    = 0x5a
-	TSIP_PACKET_TIMING_SUPERPACKET = 0x8f
+	TSIP_PACKET_SIGNAL                    = 0x47
+	TSIP_PACKET_ALL_IN_VIEW               = 0x6d
+	TSIP_PACKET_RAW_MEASUREMENT           = 0x5a
+	TSIP_PACKET_TIMING_SUPERPACKET        = 0x8f
+	TSIP_PACKET_SATELLITE_TRACKING_STATUS = 0x5c
 
 	TSIP_PACKET_TIMING_PRIMARY      = 0xab
 	TSIP_PACKET_TIMING_SUPPLEMENTAL = 0xac
@@ -88,6 +89,7 @@ type Packet struct {
 	RawMeasurement     *RawMeasurement
 	PrimaryTiming      *PrimaryTiming
 	SupplementalTiming *SupplementalTiming
+	TrackingStatus     *TrackingStatus
 
 	UnknownPacketID byte
 }
@@ -151,6 +153,20 @@ type SupplementalTiming struct {
 	LocalClockBias, LocalClockBiasRate, Temperature float32
 	Latitude, Longitude, Altitude                   float64
 	QuantizationError                               float32
+}
+
+type TrackingStatus struct {
+	PRN                uint8
+	Channel            uint8
+	AcquisitionFlag    uint8
+	EphemerisFlag      uint8
+	SignalLevel        float32
+	LastMeasurement    float32
+	Elevation          float32
+	Azimuth            float32
+	OldMeasurementFlag uint8
+	BadDataFlag        uint8
+	DataCollectionFlag uint8
 }
 
 func ParsePacket(b []byte) (result *Packet, err error) {
@@ -296,6 +312,14 @@ func ParsePacket(b []byte) (result *Packet, err error) {
 			st.Altitude = raw.Altitude
 			st.QuantizationError = raw.QuantizationError
 		}
+
+	case TSIP_PACKET_SATELLITE_TRACKING_STATUS:
+		result.TrackingStatus = new(TrackingStatus)
+		r := bytes.NewReader(b)
+		if err := binary.Read(r, binary.BigEndian, result.TrackingStatus); err != nil {
+			return result, err
+		}
+		result.TrackingStatus.Channel >>= 3
 
 	default:
 		result.UnknownPacketID = id

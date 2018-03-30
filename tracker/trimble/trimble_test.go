@@ -160,6 +160,24 @@ func TestParsePacket(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: "XBoAAAAAAAAASOqnIj3NKoFAVJgRAQAAAQ==",
+			want: &Packet{
+				TrackingStatus: &TrackingStatus{
+					PRN:                26,
+					Channel:            0,
+					AcquisitionFlag:    0,
+					EphemerisFlag:      0,
+					SignalLevel:        0,
+					LastMeasurement:    480569.06,
+					Elevation:          0.100178726,
+					Azimuth:            3.3217814,
+					OldMeasurementFlag: 1,
+					BadDataFlag:        0,
+					DataCollectionFlag: 0,
+				},
+			},
+		},
 	}
 
 	for i, test := range testData {
