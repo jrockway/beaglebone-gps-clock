@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	debug  = flag.Bool("debug", false, "whether to print extra debugging information")
 	port   = flag.String("port", "", "serial port to read TSIP from; empty to read from gpspipe")
 	dbfile = flag.String("db", "tracker.db", "database file to write")
 )
@@ -104,6 +105,9 @@ func readTSIP(p *trimble.Packetizer) {
 func readGPSStatus(packets chan []byte, temp chan tempReading, sats chan satelliteStatus) {
 	for packet := range packets {
 		tsipPackets.Add(1)
+		if *debug {
+			log.Printf("packet %#x: %v\n", packet[0], base64.StdEncoding.EncodeToString(packet))
+		}
 		p, err := trimble.ParsePacket(packet)
 		if err != nil {
 			log.Printf("parse error: %q: %v\n", base64.StdEncoding.EncodeToString(packet), err)
@@ -119,6 +123,10 @@ func readGPSStatus(packets chan []byte, temp chan tempReading, sats chan satelli
 				level:  p.RawMeasurement.SignalLevel.Level(),
 				locked: p.RawMeasurement.SignalLevel.Locked(),
 			}
+		}
+
+		if p.UnknownPacketID != 0 {
+			log.Printf("unknown packet id %#x", p.UnknownPacketID)
 		}
 	}
 }
