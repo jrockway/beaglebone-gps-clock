@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -41,14 +42,41 @@ func (db *DB) RecordTemperature(source string, temperature float64) error {
 	return nil
 }
 
-func (db *DB) RecordSatelliteStatus(prn int, strength, azimuth, elevation float64) error {
+func (db *DB) RecordSatelliteStatus(prn int, strength, azimuth, elevation float32) error {
 	s, err := db.Prepare("insert into satellite values(?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
-	s.Close()
+	defer s.Close()
 	if _, err := s.Exec(time.Now(), prn, strength, azimuth, elevation); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (db *DB) single(query string, args ...interface{}) (int, error) {
+	s, err := db.Prepare(query)
+	if err != nil {
+		return 0, err
+	}
+	defer s.Close()
+
+	rows, err := s.Query(args...)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	var result int
+	var found bool
+	for rows.Next() {
+		if found {
+			return 0, errors.New("more than one row returned!")
+		}
+		if err := rows.Scan(&result); err != nil {
+			return 0, err
+		}
+		found = true
+	}
+	return result, nil
 }
