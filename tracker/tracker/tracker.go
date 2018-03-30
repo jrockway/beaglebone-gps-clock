@@ -41,7 +41,6 @@ type tempReading struct {
 
 type satelliteStatus struct {
 	prn         int
-	locked      bool
 	level       float32
 	azimuth     float32
 	elevation   float32
@@ -103,14 +102,16 @@ func readTSIP(p *trimble.Packetizer) {
 }
 
 func readGPSStatus(packets chan []byte, temp chan tempReading, sats chan satelliteStatus) {
+	var mode, decoding, survey int
+
 	for packet := range packets {
 		tsipPackets.Add(1)
 		if *debug {
-			log.Printf("packet %#x: %v\n", packet[0], base64.StdEncoding.EncodeToString(packet))
+			log.Printf("packet %#x: %v", packet[0], base64.StdEncoding.EncodeToString(packet))
 		}
 		p, err := trimble.ParsePacket(packet)
 		if err != nil {
-			log.Printf("parse error: %q: %v\n", base64.StdEncoding.EncodeToString(packet), err)
+			log.Printf("parse error: %q: %v", base64.StdEncoding.EncodeToString(packet), err)
 		}
 
 		if p.SupplementalTiming != nil {
@@ -119,17 +120,34 @@ func readGPSStatus(packets chan []byte, temp chan tempReading, sats chan satelli
 
 		if p.RawMeasurement != nil {
 			sats <- satelliteStatus{
-				prn:    p.RawMeasurement.PRN,
-				level:  p.RawMeasurement.SignalLevel.Level(),
-				locked: p.RawMeasurement.SignalLevel.Locked(),
+				prn:   p.RawMeasurement.PRN,
+				level: p.RawMeasurement.SignalLevel.Level(),
 			}
 		}
 
 		if p.TrackingStatus != nil {
 			sats <- satelliteStatus{
 				prn:       int(p.TrackingStatus.PRN),
+				level:     p.TrackingStatus.SignalLevel,
 				azimuth:   p.TrackingStatus.Azimuth,
 				elevation: p.TrackingStatus.Elevation,
+			}
+		}
+
+		if p.SupplementalTiming != nil {
+			if m := p.SupplementalTiming.ReceiverMode; m != mode {
+				mode = m
+				log.Printf("receiver mode %d", m)
+			}
+
+			if d := p.SupplementalTiming.GPSDecodingStatus; d != decoding {
+				decoding = d
+				log.Printf("decoding status %d", d)
+			}
+
+			if s := p.SupplementalTiming.SelfSurveyProgress; s != survey {
+				survey = s
+				log.Printf("self-survey progress %d", s)
 			}
 		}
 
@@ -190,7 +208,6 @@ func recordSatellites(c chan satelliteStatus, db *DB) {
 		state.prn = reading.prn
 		if reading.level != 0 {
 			state.level = reading.level
-			state.locked = reading.locked
 		}
 
 		if reading.azimuth != 0 || reading.elevation != 0 {
@@ -211,7 +228,7 @@ func recordSatellites(c chan satelliteStatus, db *DB) {
 
 		var tracked []string
 		for _, state := range sats {
-			if state.locked && state.level > 0 && time.Since(state.lastUpdated) < time.Minute {
+			if state.level > 0 && time.Since(state.lastUpdated) < time.Minute {
 				tracked = append(tracked, fmt.Sprintf("%d", state.prn))
 			}
 		}
