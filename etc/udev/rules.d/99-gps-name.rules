@@ -1,2 +1,3 @@
-KERNEL=="ttyS4", SUBSYSTEM=="tty", SYMLINK+="gps0"
+KERNEL=="ttyS4", SUBSYSTEM=="tty", SYMLINK+="gps0", RUN+="/bin/stty -F /dev/ttyS4 speed 115200"
+
 
