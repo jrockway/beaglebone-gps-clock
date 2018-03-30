@@ -321,6 +321,9 @@ func ParsePacket(b []byte) (result *Packet, err error) {
 		}
 		result.TrackingStatus.Channel >>= 3
 
+	case 0x46, 0x4b, 0x13:
+		// Ignore.  gpsd demands these from the receiver but they are deprecated and the
+		// layout is not documented.
 	default:
 		result.UnknownPacketID = id
 	}
