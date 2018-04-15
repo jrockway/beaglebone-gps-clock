@@ -311,6 +311,8 @@ func ParsePacket(b []byte) (result *Packet, err error) {
 			st.Longitude = raw.Longitude
 			st.Altitude = raw.Altitude
 			st.QuantizationError = raw.QuantizationError
+		default:
+			result.UnknownPacketID = TSIP_PACKET_TIMING_SUPERPACKET<<8 + b[0]
 		}
 
 	case TSIP_PACKET_SATELLITE_TRACKING_STATUS:
