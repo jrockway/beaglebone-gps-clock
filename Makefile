@@ -10,9 +10,10 @@ display-clock:
 	make -C display-clock
 
 clean:
-	rm *.dtbo
+	rm -f *.dtbo
 	make -C display-clock clean
 	rm -f bb.org-overlays/src/arm/CLOCK-00A0.dts
 	make -C bb.org-overlays clean
+	make -C tracker/tracker clean
 
 .PHONY: all clean display-clock
