@@ -217,7 +217,7 @@ pass in that information. But sure, write thousands of lines of code to waste
 several seconds guessing, I guess, if that's how you want to spend your spare
 time. In the end, it works, which I suppose is better than something that
 doesn't work. The gpsd project also has a [very thorough
-writeup](http://www.catb.org/gpsd/gpsd-time-service-howto.html) on how to
+writeup](https://gpsd.gitlab.io/gpsd/gpsd-time-service-howto.html) on how to
 interface it with NTP for timing purposes. Good document.
 
 Anyway, edit some config files and chronyd will know the GPS time (actually
