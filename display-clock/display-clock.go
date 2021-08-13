@@ -13,12 +13,12 @@ import (
 func main() {
 	here, err := time.LoadLocation("America/New_York")
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 
 	spi, err := spidev.NewSPIDevice("/dev/spidev0.0")
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 
 	spi.Xfer([]byte{0x0B, 0x07}) // scan limit
