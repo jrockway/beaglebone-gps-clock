@@ -4,7 +4,6 @@ import (
 	"image"
 	"image/color"
 	"log"
-	"os"
 	"time"
 
 	"github.com/goiot/devices/dotstar"
@@ -35,15 +34,21 @@ var myFont = &basicfont.Face{
 func main() {
 	d, err := dotstar.Open(&spi.Devfs{Dev: "/dev/spidev0.0", Mode: spi.Mode3}, n)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("open dotstar: %v", err)
 	}
 
+	// Blank the display.
 	for i := 0; i < 6*8*8; i++ {
 		d.SetRGBA(i, dotstar.RGBA{0, 0, 0, 0})
 	}
 	d.Draw()
 
+	if err := monitorSensors(); err != nil {
+		log.Fatalf("init sensors: %v", err)
+	}
+
 	for {
+		// Render the current time.
 		img := image.NewRGBA(image.Rect(0, 0, 48, 8))
 		(&font.Drawer{
 			Dst:  img,
@@ -83,22 +88,4 @@ func main() {
 		log.Printf("sleeping for %s", time.Until(time.Now().Add(time.Second).Truncate(time.Second)).String())
 		time.Sleep(time.Until(time.Now().Add(time.Second).Truncate(time.Second)))
 	}
-	log.Println("done")
-
-	// log.Println("ready")
-	// for j := 0; ; j++ {
-	// 	for i := 0; i < n; i++ {
-	// 		if i/64%2 == 0 {
-	// 			d.SetRGBA(i, dotstar.RGBA{100, 0, 0, 1})
-	// 		} else if i < j%n {
-	// 			d.SetRGBA(i, dotstar.RGBA{0, 100, 0, 1})
-	// 		} else {
-	// 			d.SetRGBA(i, dotstar.RGBA{0, 0, 100, 1})
-	// 		}
-	// 	}
-	// 	d.Draw()
-	// 	time.Sleep(time.Millisecond)
-	// }
-	d.Close()
-	os.Exit(0)
 }

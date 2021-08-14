@@ -9,7 +9,9 @@ require (
 	github.com/prometheus/client_golang v1.2.1
 	golang.org/x/exp v0.0.0-20190731235908-ec7cb31e5a56
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
-	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
+	periph.io/x/conn/v3 v3.6.8
+	periph.io/x/devices/v3 v3.6.11
 	periph.io/x/extra v0.0.0-20190805002851-353eec1a00ff
+	periph.io/x/host/v3 v3.7.0
 	periph.io/x/periph v3.6.2+incompatible
 )
