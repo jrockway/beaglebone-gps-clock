@@ -8,7 +8,8 @@ require (
 	github.com/jrockway/periphflag v0.0.0-20191020104359-a1cd7211ce99
 	github.com/prometheus/client_golang v1.2.1
 	golang.org/x/exp v0.0.0-20190731235908-ec7cb31e5a56
-	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
+	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
+	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
 	periph.io/x/extra v0.0.0-20190805002851-353eec1a00ff
 	periph.io/x/periph v3.6.2+incompatible
 )
