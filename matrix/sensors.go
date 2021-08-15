@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stratoberry/go-gpsd"
 	"periph.io/x/conn/v3/i2c"
 	"periph.io/x/conn/v3/i2c/i2creg"
 	"periph.io/x/conn/v3/physic"
@@ -98,6 +99,34 @@ func monitorSensors() error {
 				log.Printf("write luminosity to influx: %v", err)
 				continue
 			}
+		}
+	}()
+
+	gps, err := gpsd.Dial("localhost:2947")
+	if err != nil {
+		return fmt.Errorf("dial gpsd: %v", err)
+	}
+	gps.AddFilter("SKY", func(r interface{}) {
+		t := time.Now()
+		sky := r.(*gpsd.SKYReport)
+		buf := new(strings.Builder)
+		for _, s := range sky.Satellites {
+			used := "0u"
+			if s.Used {
+				used = "1u"
+			}
+			buf.WriteString(fmt.Sprintf("satellite,prn=%v azimuth=%v,elevation=%v,snr=%v,used=%v %v\n", s.PRN, s.Az, s.El, s.Ss, used, t.UnixNano()))
+		}
+		buf.WriteString(fmt.Sprintf("dop xdop=%v,ydop=%v,vdop=%v,tdop=%v,hdop=%v,pdop=%v,gdop=%v %v\n", sky.Xdop, sky.Ydop, sky.Vdop, sky.Tdop, sky.Hdop, sky.Pdop, sky.Gdop, t.UnixNano()))
+		if err := sendToInflux(buf.String()); err != nil {
+			log.Printf("write satellite status to influx: %v", err)
+			return
+		}
+	})
+	go func() {
+		for {
+			<-gps.Watch()
+			log.Printf("gpsd watch stopped; restarting")
 		}
 	}()
 	return nil
