@@ -22,18 +22,18 @@ import (
 
 func monitorSensors() error {
 	if _, err := host.Init(); err != nil {
-		return fmt.Errorf("init host: %v", err)
+		return fmt.Errorf("init host: %w", err)
 	}
 
 	i2cBus, err := i2creg.Open("2")
 	if err != nil {
-		return fmt.Errorf("open i2c: %v", err)
+		return fmt.Errorf("open i2c: %w", err)
 	}
 
 	tempOpts := bmxx80.Opts{Temperature: bmxx80.O16x, Pressure: bmxx80.O16x, Humidity: bmxx80.O16x}
 	temp, err := bmxx80.NewI2C(i2cBus, 0x77, &tempOpts)
 	if err != nil {
-		log.Fatalf("init bme280: %v", err)
+		return fmt.Errorf("init bme280: %w", err)
 	}
 	go func() {
 		first := true
@@ -81,13 +81,8 @@ func monitorSensors() error {
 			log.Printf("adjust tsl2591 integration time: %v", err)
 			return
 		}
-		first := true
 		for {
-			if first {
-				first = false
-			} else {
-				time.Sleep(30 * time.Second)
-			}
+			time.Sleep(time.Second)
 			both, ir, err := light.GetLuminosity()
 			if err != nil {
 				log.Printf("read luminosity: %v", err)
@@ -104,7 +99,7 @@ func monitorSensors() error {
 
 	gps, err := gpsd.Dial("localhost:2947")
 	if err != nil {
-		return fmt.Errorf("dial gpsd: %v", err)
+		return fmt.Errorf("dial gpsd: %w", err)
 	}
 	gps.AddFilter("SKY", func(r interface{}) {
 		t := time.Now()
@@ -129,6 +124,7 @@ func monitorSensors() error {
 			log.Printf("gpsd watch stopped; restarting")
 		}
 	}()
+
 	return nil
 }
 
@@ -175,12 +171,12 @@ const (
 func (t *TSL2591) ReadRegister(r Register, out interface{}) error {
 	var buf [2]byte
 	if err := t.dev.Tx([]byte{byte(0xA0 | r)}, buf[:]); err != nil {
-		return fmt.Errorf("tx: %v", err)
+		return fmt.Errorf("tx: %w", err)
 	}
 	//fmt.Printf("read 0x%x:\n%s\n", r, hex.Dump(buf[:]))
 	reader := bytes.NewReader(buf[:])
 	if err := binary.Read(reader, binary.LittleEndian, out); err != nil {
-		return fmt.Errorf("binary.Read: %v", err)
+		return fmt.Errorf("binary.Read: %w", err)
 	}
 	return nil
 }
@@ -191,7 +187,7 @@ func (t *TSL2591) WriteRegister(r Register, data ...byte) error {
 	w[0] = byte(0xA0 | r)
 	w = append(w, data...)
 	if err := t.dev.Tx(w, nil); err != nil {
-		return fmt.Errorf("tx: %v", err)
+		return fmt.Errorf("tx: %w", err)
 	}
 	return nil
 }
@@ -199,14 +195,14 @@ func (t *TSL2591) WriteRegister(r Register, data ...byte) error {
 func (t *TSL2591) GetDeviceID() (uint8, error) {
 	var result uint8
 	if err := t.ReadRegister(RegisterDeviceID, &result); err != nil {
-		return 0, fmt.Errorf("read register: %v", err)
+		return 0, fmt.Errorf("read register: %w", err)
 	}
 	return result, nil
 }
 
 func (t *TSL2591) Enable() error {
 	if err := t.WriteRegister(RegisterEnable, CommandEnablePowerOn|CommandEnableAEN|CommandEnableAIEN|CommandEnableNPIEN); err != nil {
-		return fmt.Errorf("write enable register: %v", err)
+		return fmt.Errorf("write enable register: %w", err)
 	}
 	return nil
 }
@@ -214,12 +210,12 @@ func (t *TSL2591) Enable() error {
 func (t *TSL2591) SetGain(gain Gain) error {
 	var control uint8
 	if err := t.ReadRegister(RegisterControl, &control); err != nil {
-		return fmt.Errorf("read control register: %v", err)
+		return fmt.Errorf("read control register: %w", err)
 	}
 	control &= 0b11001111
 	control |= uint8(gain)
 	if err := t.WriteRegister(RegisterControl, control); err != nil {
-		return fmt.Errorf("write control register: %v", err)
+		return fmt.Errorf("write control register: %w", err)
 	}
 	t.gain = gain
 	return nil
@@ -228,12 +224,12 @@ func (t *TSL2591) SetGain(gain Gain) error {
 func (t *TSL2591) SetIntegrationTime(it uint8) error {
 	var control uint8
 	if err := t.ReadRegister(RegisterControl, &control); err != nil {
-		return fmt.Errorf("read control register: %v", err)
+		return fmt.Errorf("read control register: %w", err)
 	}
 	control &= 0b11111000
 	control |= it
 	if err := t.WriteRegister(RegisterControl, control); err != nil {
-		return fmt.Errorf("write control register: %v", err)
+		return fmt.Errorf("write control register: %w", err)
 	}
 	switch it {
 	case IntegrationTime100ms:
@@ -255,10 +251,10 @@ func (t *TSL2591) SetIntegrationTime(it uint8) error {
 func (t *TSL2591) GetLuminosity() (uint16, uint16, error) {
 	var chan0, chan1 uint16
 	if err := t.ReadRegister(RegisterChan0Low, &chan0); err != nil {
-		return 0, 0, fmt.Errorf("read chan0: %v", err)
+		return 0, 0, fmt.Errorf("read chan0: %w", err)
 	}
 	if err := t.ReadRegister(RegisterChan1Low, &chan1); err != nil {
-		return 0, 0, fmt.Errorf("read chan1: %v", err)
+		return 0, 0, fmt.Errorf("read chan1: %w", err)
 	}
 	return chan0, chan1, nil
 }
@@ -289,13 +285,13 @@ func sendToInflux(body string) error {
 	defer c()
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://influxdb.jrock.us/api/v2/write?org=jrock.us&bucket=home-sensors", strings.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("create request: %v", err)
+		return fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Add("authorization", "Token "+os.Getenv("INFLUXDB_TOKEN"))
 	req.Header.Add("content-type", "text/plain")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("make request: %v", err)
+		return fmt.Errorf("make request: %w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusNoContent {
