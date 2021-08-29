@@ -10,7 +10,7 @@ display-clock:
 	make -C display-clock
 
 matrix.arm: matrix/*.go go.mod go.sum
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -o matrix.arm ./matrix
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -o matrix.arm ./matrix
 
 clean:
 	rm -f *.dtbo
