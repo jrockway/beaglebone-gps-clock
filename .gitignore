@@ -1,3 +1,4 @@
 *.dtbo
 display-clock/display-clock
 *.exe
+matrix.arm

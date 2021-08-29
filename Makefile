@@ -1,4 +1,4 @@
-all: CLOCK-00A0.dtbo display-clock
+all: CLOCK-00A0.dtbo matrix-cross
 
 CLOCK-00A0.dtbo: CLOCK-00A0.dts
 	cp CLOCK-00A0.dts bb.org-overlays/src/arm
@@ -8,6 +8,9 @@ CLOCK-00A0.dtbo: CLOCK-00A0.dts
 
 display-clock:
 	make -C display-clock
+
+matrix.arm: matrix/*.go go.mod go.sum
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -o matrix.arm ./matrix
 
 clean:
 	rm -f *.dtbo

@@ -2,13 +2,9 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -275,28 +271,4 @@ func (t *TSL2591) Lux(total, ir uint16) float64 {
 	// https://github.com/adafruit/Adafruit_TSL2591_Library/issues/14
 	cpl := (gain * float64(t.it) / float64(time.Millisecond)) / 408.0
 	return float64(total-ir) * (1.0 - float64(ir)/float64(total)) / cpl
-}
-
-// We write our own InfluxDB client because the official one requires more memory to compile than the
-// Beaglebone has.  This is better than having to cross-compile and copy a binary over for every
-// iteration of testing.
-func sendToInflux(body string) error {
-	ctx, c := context.WithTimeout(context.Background(), 5*time.Second)
-	defer c()
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://influxdb.jrock.us/api/v2/write?org=jrock.us&bucket=home-sensors", strings.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Add("authorization", "Token "+os.Getenv("INFLUXDB_TOKEN"))
-	req.Header.Add("content-type", "text/plain")
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("make request: %w", err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(res.Body)
-		return fmt.Errorf("make request: unexpected status %v (%s): (body: %s)", res.StatusCode, res.Status, body)
-	}
-	return nil
 }
