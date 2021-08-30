@@ -5,34 +5,25 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
-	"github.com/stratoberry/go-gpsd"
+	"golang.org/x/net/trace"
 	"periph.io/x/conn/v3/i2c"
-	"periph.io/x/conn/v3/i2c/i2creg"
 	"periph.io/x/conn/v3/physic"
 	"periph.io/x/devices/v3/bmxx80"
-	"periph.io/x/host/v3"
 )
 
-func monitorSensors() error {
-	if _, err := host.Init(); err != nil {
-		return fmt.Errorf("init host: %w", err)
-	}
-
-	i2cBus, err := i2creg.Open("2")
-	if err != nil {
-		return fmt.Errorf("open i2c: %w", err)
-	}
-
+func monitorSensors(i2cBus i2c.Bus) error {
 	tempOpts := bmxx80.Opts{Temperature: bmxx80.O16x, Pressure: bmxx80.O16x, Humidity: bmxx80.O16x}
 	temp, err := bmxx80.NewI2C(i2cBus, 0x77, &tempOpts)
 	if err != nil {
 		return fmt.Errorf("init bme280: %w", err)
 	}
 	go func() {
+		l := trace.NewEventLog("sensor", "environment")
+		defer l.Finish()
 		first := true
+		log.Printf("starting bme280 loop")
 		for {
 			if first {
 				first = false
@@ -41,13 +32,13 @@ func monitorSensors() error {
 			}
 			var e physic.Env
 			if err := temp.Sense(&e); err != nil {
-				log.Printf("read temperature: %v", err)
+				l.Errorf("error: read temperature: %v", err)
 				continue
 			}
-			log.Printf("Temp: %v, Pressure: %v, Humidity: %v", e.Temperature, e.Pressure, e.Humidity)
+			l.Printf("Temp: %v, Pressure: %v, Humidity: %v", e.Temperature, e.Pressure, e.Humidity)
 			// Temperature is in nanokelvin.  Humidity is in 10ths of a micro% (!).  Pressure is in nanopascal.
 			if err := sendToInflux(fmt.Sprintf("environment temperature=%vu,relative_humidity=%vu,pressure=%vu %v\n", int64(e.Temperature), int64(e.Humidity), int64(e.Pressure), time.Now().UnixNano())); err != nil {
-				log.Printf("write influx: %v", err)
+				l.Errorf("error: write influx: %v", err)
 				continue
 			}
 
@@ -56,71 +47,45 @@ func monitorSensors() error {
 
 	light := TSL2591{dev: i2c.Dev{Bus: i2cBus, Addr: 0x29}}
 	go func() {
+		l := trace.NewEventLog("sensor", "luminosity")
+		defer l.Finish()
 		id, err := light.GetDeviceID()
 		if err != nil {
-			log.Printf("get device id: %v", err)
+			l.Errorf("get device id: %v", err)
 			return
 		}
 		if got, want := id, uint8(0x50); got != want {
-			log.Printf("device at 0x29 is not a TSL2591 (got: %x, want: %x)", got, want)
+			l.Errorf("device at 0x29 is not a TSL2591 (got: %x, want: %x)", got, want)
 			return
 		}
 		if err := light.Enable(); err != nil {
-			log.Printf("enable tsl2591: %v", err)
+			l.Errorf("enable tsl2591: %v", err)
 			return
 		}
 		if err := light.SetGain(HighGain); err != nil {
-			log.Printf("adjust tsl2591 gain: %v", err)
+			l.Errorf("adjust tsl2591 gain: %v", err)
 			return
 		}
 		if err := light.SetIntegrationTime(IntegrationTime600ms); err != nil {
-			log.Printf("adjust tsl2591 integration time: %v", err)
+			l.Errorf("adjust tsl2591 integration time: %v", err)
 			return
 		}
+		log.Printf("starting tsl2591 loop")
 		for {
 			time.Sleep(time.Second)
 			both, ir, err := light.GetLuminosity()
 			if err != nil {
-				log.Printf("read luminosity: %v", err)
+				l.Errorf("read luminosity: %v", err)
 				continue
 			}
-			log.Printf("Raw luminosity: %v ir: %v", both, ir)
+			l.Printf("luminosity: %v ir: %v", both, ir)
 			// TODO: scale by gain before writing.
 			if err := sendToInflux(fmt.Sprintf("luminosity combined=%vu,ir=%vu %v\n", both, ir, time.Now().UnixNano())); err != nil {
-				log.Printf("write luminosity to influx: %v", err)
+				l.Errorf("write influx: %v", err)
 				continue
 			}
 		}
 	}()
-
-	gps, err := gpsd.Dial("localhost:2947")
-	if err != nil {
-		return fmt.Errorf("dial gpsd: %w", err)
-	}
-	gps.AddFilter("SKY", func(r interface{}) {
-		t := time.Now()
-		sky := r.(*gpsd.SKYReport)
-		buf := new(strings.Builder)
-		for _, s := range sky.Satellites {
-			used := "0u"
-			if s.Used {
-				used = "1u"
-			}
-			buf.WriteString(fmt.Sprintf("satellite,prn=%v azimuth=%v,elevation=%v,snr=%v,used=%v %v\n", s.PRN, s.Az, s.El, s.Ss, used, t.UnixNano()))
-		}
-		buf.WriteString(fmt.Sprintf("dop xdop=%v,ydop=%v,vdop=%v,tdop=%v,hdop=%v,pdop=%v,gdop=%v %v\n", sky.Xdop, sky.Ydop, sky.Vdop, sky.Tdop, sky.Hdop, sky.Pdop, sky.Gdop, t.UnixNano()))
-		if err := sendToInflux(buf.String()); err != nil {
-			log.Printf("write satellite status to influx: %v", err)
-			return
-		}
-	})
-	go func() {
-		for {
-			<-gps.Watch()
-			log.Printf("gpsd watch stopped; restarting")
-		}
-	}()
-
 	return nil
 }
 

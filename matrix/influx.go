@@ -9,7 +9,22 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/net/trace"
 )
+
+var (
+	influxEventLog = trace.NewEventLog("destination", "influxdb.jrock.us")
+	token          string
+)
+
+func init() {
+	token = os.Getenv("INFLUXDB_TOKEN")
+	if token == "" {
+		log.Println("not sending to influxdb; $INFLUXDB_TOKEN not set")
+		influxEventLog.Errorf("not sent; INFLUXDB_TOKEN is empty")
+	}
+}
 
 // We write our own InfluxDB client because the official one requires more memory to compile than
 // the Beaglebone has.  I did this to avoid cross-compiling but honestly upgrading to go 1.17 made
@@ -18,9 +33,8 @@ import (
 // sendToInflux writes "line protocol" data to InfluxDB.  If $INFLUXDB_TOKEN is empty, we print the
 // line instead of sending it to the database.
 func sendToInflux(body string) error {
-	token := os.Getenv("INFLUXDB_TOKEN")
+	influxEventLog.Printf("%s", body)
 	if token == "" {
-		log.Printf("not sent to influx: %s", body)
 		return nil
 	}
 
@@ -39,6 +53,7 @@ func sendToInflux(body string) error {
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(res.Body)
+		influxEventLog.Errorf("unexpected status %v", res.StatusCode)
 		return fmt.Errorf("make request: unexpected status %v (%s): (body: %s)", res.StatusCode, res.Status, body)
 	}
 	return nil

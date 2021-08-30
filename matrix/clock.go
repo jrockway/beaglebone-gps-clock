@@ -12,6 +12,7 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
+	"golang.org/x/net/trace"
 )
 
 // n is the number of LEDs on the strip.
@@ -27,23 +28,27 @@ var myFont = &basicfont.Face{
 	Descent: 0,
 	Mask:    mask5x8,
 	Ranges: []basicfont.Range{
-		{'\u0020', '\u007f', 0},
-		{'\ufffd', '\ufffe', 95},
+		{Low: '\u0020', High: '\u007f', Offset: 0},
+		{Low: '\ufffd', High: '\ufffe', Offset: 95},
 	},
 }
 
 func drawClock() error {
+	l := trace.NewEventLog("peripheral", "display")
+	l.Printf("open /dev/spidev0.0")
 	d, err := dotstar.Open(&spi.Devfs{Dev: "/dev/spidev0.0", Mode: spi.Mode3}, n)
 	if err != nil {
+		l.Errorf("open dotstar: %v", err)
 		return fmt.Errorf("open dotstar: %w", err)
 	}
 
 	// Blank the display.
 	for i := 0; i < 6*8*8; i++ {
-		d.SetRGBA(i, dotstar.RGBA{0, 0, 0, 0})
+		d.SetRGBA(i, dotstar.RGBA{R: 0, G: 0, B: 0, A: 0})
 	}
 	d.Draw()
 
+	log.Printf("starting clock update loop")
 	go func() {
 		for {
 			// Render the current time.
@@ -52,7 +57,7 @@ func drawClock() error {
 				Dst:  img,
 				Src:  image.NewUniform(color.RGBA{R: 0x20, G: 0xa0, B: 0xff, A: 0xff}),
 				Face: myFont,
-				Dot:  fixed.Point26_6{fixed.Int26_6(0), fixed.Int26_6(540)},
+				Dot:  fixed.Point26_6{X: fixed.Int26_6(0), Y: fixed.Int26_6(540)},
 			}).DrawString(time.Now().Format("15:04:05"))
 			for _, matrix := range []int{0, 2, 4} {
 				i := matrix * 64
@@ -63,7 +68,7 @@ func drawClock() error {
 						if matrix > 3 {
 							scale = 50
 						}
-						d.SetRGBA(i, dotstar.RGBA{byte(r) / scale, byte(g) / scale, byte(b) / scale, 5})
+						d.SetRGBA(i, dotstar.RGBA{R: byte(r) / scale, G: byte(g) / scale, B: byte(b) / scale, A: 5})
 						i++
 					}
 				}
@@ -77,13 +82,13 @@ func drawClock() error {
 						if matrix > 3 {
 							scale = 50
 						}
-						d.SetRGBA(i, dotstar.RGBA{byte(r) / scale, byte(g) / scale, byte(b) / scale, 5})
+						d.SetRGBA(i, dotstar.RGBA{R: byte(r) / scale, G: byte(g) / scale, B: byte(b) / scale, A: 5})
 						i++
 					}
 				}
 			}
 			d.Draw()
-			log.Printf("sleeping for %s", time.Until(time.Now().Add(time.Second).Truncate(time.Second)).String())
+			l.Printf("sleeping for %s", time.Until(time.Now().Add(time.Second).Truncate(time.Second)).String())
 			time.Sleep(time.Until(time.Now().Add(time.Second).Truncate(time.Second)))
 		}
 	}()

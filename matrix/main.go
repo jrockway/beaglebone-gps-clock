@@ -2,22 +2,42 @@ package main
 
 import (
 	"log"
-	"time"
+	"net/http"
+	_ "net/http/pprof"
+
+	"golang.org/x/net/trace"
+	"periph.io/x/conn/v3/i2c/i2creg"
+	"periph.io/x/host/v3"
 )
 
 func main() {
-	if err := monitorSensors(); err != nil {
-		log.Fatalf("init sensors: %v", err)
+	trace.AuthRequest = func(req *http.Request) (any bool, sensitive bool) {
+		return true, true
 	}
 
-	if err := drawClock(); err != nil {
-		log.Fatalf("init clock: %v", err)
+	if _, err := host.Init(); err != nil {
+		log.Fatalf("init host: %v", err)
 	}
 
-	for {
-		if err := monitorChrony(); err != nil {
-			log.Printf("monitor chrony exited unexpectedly: %v", err)
-			time.Sleep(10 * time.Second)
+	i2cBus, err := i2creg.Open("2")
+	if err != nil {
+		log.Printf("open i2c: %v", err)
+		log.Printf("not monitoring sensors")
+	}
+
+	if i2cBus != nil {
+		if err := monitorSensors(i2cBus); err != nil {
+			log.Fatalf("init sensors: %v", err)
 		}
+
+		if err := drawClock(); err != nil {
+			log.Fatalf("init clock: %v", err)
+		}
+
 	}
+	go watchGpsd()
+	go watchChrony()
+
+	log.Println("listening on :8080")
+	http.ListenAndServe("0.0.0.0:8080", nil)
 }

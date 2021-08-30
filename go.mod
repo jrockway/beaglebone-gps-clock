@@ -11,6 +11,7 @@ require (
 	github.com/stratoberry/go-gpsd v0.0.0-20161204231141-54ddcfa61f47
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
+	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
 	periph.io/x/conn/v3 v3.6.8
 	periph.io/x/devices/v3 v3.6.11
 	periph.io/x/extra v0.0.0-20190805002851-353eec1a00ff
