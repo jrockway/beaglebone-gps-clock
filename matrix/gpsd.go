@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"time"
 
@@ -35,7 +36,11 @@ func monitorGpsd(l trace.EventLog) {
 		t := time.Now()
 		sky := r.(*gpsd.SKYReport)
 		buf := new(strings.Builder)
+		sort.Slice(sky.Satellites, func(i, j int) bool {
+			return sky.Satellites[i].PRN < sky.Satellites[j].PRN
+		})
 		l.Printf("sky report: %#v", sky)
+		UpdateStatus(Status{Satellites: sky.Satellites})
 		for _, s := range sky.Satellites {
 			used := "0u"
 			if s.Used {

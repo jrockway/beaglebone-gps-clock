@@ -16,14 +16,8 @@ import (
 	"time"
 
 	"github.com/facebookincubator/ntp/protocol/chrony"
+	"github.com/stratoberry/go-gpsd"
 )
-
-type Status struct {
-	ClockFace *image.RGBA
-	Now       time.Time
-	Tracking  chrony.ReplyTracking
-	Sources   []chrony.ReplySourceData
-}
 
 var (
 	statusMu sync.RWMutex
@@ -45,6 +39,43 @@ var (
 	}
 	index = template.Must(template.New("index").Funcs(funcMap).Parse(indexHTML))
 )
+
+type Status struct {
+	ClockFace  *image.RGBA
+	Now        time.Time
+	Tracking   chrony.ReplyTracking
+	Sources    []chrony.ReplySourceData
+	Satellites []gpsd.Satellite
+}
+
+func UpdateStatus(newStatus Status) {
+	statusMu.Lock()
+	defer statusMu.Unlock()
+	if newStatus.ClockFace != nil {
+		status.ClockFace = newStatus.ClockFace
+	}
+	if newStatus.Tracking.Command != 0 {
+		status.Tracking = newStatus.Tracking
+	}
+	if len(newStatus.Sources) != 0 {
+		status.Sources = newStatus.Sources
+	}
+	if !newStatus.Now.IsZero() {
+		status.Now = newStatus.Now
+	}
+	if len(newStatus.Satellites) > 0 {
+		status.Satellites = newStatus.Satellites
+	}
+}
+
+func ServeStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	statusMu.RLock()
+	defer statusMu.RUnlock()
+	if err := index.Execute(w, status); err != nil {
+		log.Printf("execute template: %v", err)
+	}
+}
 
 func formatHex(x interface{}) string { return fmt.Sprintf("%x", x) }
 
@@ -136,7 +167,7 @@ func formatSource(x chrony.ReplySourceData) string {
 	if len(name) > 27 {
 		name = name[:27]
 	}
-	return fmt.Sprintf("%s%s %-27s  %2d   %2d   %08b  %12s  %12s[%12s] +/- %12s\n", mode, state, name, x.Stratum, x.Poll, x.Reachability, time.Duration(1e9*x.SinceSample), time.Duration(1e9*x.LatestMeas), time.Duration(1e9*x.OrigLatestMeas), time.Duration(1e9*x.LatestMeasErr))
+	return fmt.Sprintf("%s%s %-27s  %2d   %2d   %08b  %13s  %13s[%13s] +/- %13s\n", mode, state, name, x.Stratum, x.Poll, x.Reachability, time.Duration(1e9*x.SinceSample), time.Duration(1e9*x.LatestMeas), time.Duration(1e9*x.OrigLatestMeas), time.Duration(1e9*x.LatestMeasErr))
 }
 
 func formatImage(src *image.RGBA) template.URL {
@@ -165,29 +196,3 @@ func formatImage(src *image.RGBA) template.URL {
 }
 
 func formatFloat3(x float64) string { return fmt.Sprintf("%.3f", x) }
-
-func UpdateStatus(newStatus Status) {
-	statusMu.Lock()
-	defer statusMu.Unlock()
-	if newStatus.ClockFace != nil {
-		status.ClockFace = newStatus.ClockFace
-	}
-	if newStatus.Tracking.Command != 0 {
-		status.Tracking = newStatus.Tracking
-	}
-	if len(newStatus.Sources) != 0 {
-		status.Sources = newStatus.Sources
-	}
-	if !newStatus.Now.IsZero() {
-		status.Now = newStatus.Now
-	}
-}
-
-func ServeStatus(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	statusMu.RLock()
-	defer statusMu.RUnlock()
-	if err := index.Execute(w, status); err != nil {
-		log.Printf("execute template: %v", err)
-	}
-}

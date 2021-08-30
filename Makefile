@@ -9,7 +9,7 @@ CLOCK-00A0.dtbo: CLOCK-00A0.dts
 display-clock:
 	make -C display-clock
 
-matrix.arm: matrix/*.go go.mod go.sum
+matrix.arm: matrix/*.go go.mod go.sum matrix/*.tmpl
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -o matrix.arm ./matrix
 
 clean:

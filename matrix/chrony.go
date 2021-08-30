@@ -31,20 +31,22 @@ func monitorChrony(l trace.EventLog) error {
 		l.Errorf("dial: %v", err)
 		return fmt.Errorf("dial: %w", err)
 	}
-	if err := conn.SetReadDeadline(time.Now().Add(5 * time.Minute)); err != nil {
-		l.Errorf("set read deadline: %v", err)
-		return fmt.Errorf("set read deadline: %w", err)
-	}
-	var wait bool
-	c := chrony.Client{Sequence: 1, Connection: conn}
 
+	c := chrony.Client{Sequence: 1, Connection: conn}
 	log.Printf("connected to chronyd ok; starting loop")
+	var wait bool
 	for {
 		if wait {
-			time.Sleep(time.Minute)
+			time.Sleep(30 * time.Second)
 		} else {
 			wait = true
 		}
+		deadline := time.Now().Add(time.Minute)
+		if err := conn.SetReadDeadline(deadline); err != nil {
+			l.Errorf("set read deadline: %v", err)
+			return fmt.Errorf("set read deadline: %w", err)
+		}
+		l.Printf("extended read deadline to %v", deadline.Format("15:04:05.000000"))
 		ts := time.Now().UnixNano()
 
 		treq := chrony.NewTrackingPacket()

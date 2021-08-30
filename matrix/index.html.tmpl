@@ -5,8 +5,10 @@
 <body>
 <h1>Matrix clock</h1>
 <img src="{{ .ClockFace | image }}" />
+<br />
+<a href="/debug/events">Event logs</a>
 <h2>Chrony</h2>
-<p>Tracking</p>
+<h3>Tracking</h3>
 <pre>
 Reference ID    : {{ .Tracking.RefID | hex}} ({{.Tracking.RefID | refid}})
 Stratum         : {{ .Tracking.Stratum}}
@@ -22,13 +24,33 @@ Root dispersion : {{ .Tracking.RootDispersion | duration }}
 Update interval : {{ .Tracking.LastUpdateInterval | duration }}
 Leap status     : {{ .Tracking.LeapStatus | leap }}
 </pre>
-<p>Sources</p>
+<h3>Sources</h3>
 <pre>
-MS Name/IP address         Stratum Poll      Reach        LastRx                                  Last sample
-=============================================================================================================
+MS Name/IP address         Stratum Poll      Reach        LastRx                                      Last sample
+=================================================================================================================
 {{ range .Sources }}{{ . | source }}{{ end }}
 </pre>
 
-<a href="/debug/events">Event logs</a>
+<h2>Satellites</h2>
+<table>
+  <thead>
+    <tr>
+      <td>PRN</td>
+      <td>Azimuth</td>
+      <td>Elevation</td>
+      <td>Signal strength</td>
+      <td>Used?<td>
+    </tr>
+  </thead>
+{{ range .Satellites }}
+<tr>
+  <td>{{.PRN}}</td>
+  <td>{{.Az}}</td>
+  <td>{{.El}}</td>
+  <td>{{.Ss}}</td>
+  <td>{{.Used}}<td>
+</tr>
+{{ end }}
+</table>
 </body>
 </html>
