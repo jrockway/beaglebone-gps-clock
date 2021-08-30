@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/base64"
 	"encoding/binary"
@@ -12,6 +13,9 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,6 +40,7 @@ var (
 		"freq":       formatFreq,
 		"source":     formatSource,
 		"image":      formatImage,
+		"skyview":    formatSkyView,
 	}
 	index = template.Must(template.New("index").Funcs(funcMap).Parse(indexHTML))
 )
@@ -91,6 +96,8 @@ func formatDuration(x float64) string {
 	d := time.Duration(x * 1e9)
 	return d.String()
 }
+
+func formatFloat3(x float64) string { return fmt.Sprintf("%.3f", x) }
 
 func formatLeap(x uint16) string {
 	// From chrony/client.c and chrony/ntp.h
@@ -170,6 +177,14 @@ func formatSource(x chrony.ReplySourceData) string {
 	return fmt.Sprintf("%s%s %-27s  %2d   %2d   %08b  %13s  %13s[%13s] +/- %13s\n", mode, state, name, x.Stratum, x.Poll, x.Reachability, time.Duration(1e9*x.SinceSample), time.Duration(1e9*x.LatestMeas), time.Duration(1e9*x.OrigLatestMeas), time.Duration(1e9*x.LatestMeasErr))
 }
 
+func ImageAsDataURL(bytes []byte) template.URL {
+	return template.URL("data:image/png;base64," + base64.RawStdEncoding.EncodeToString(bytes))
+}
+
+func ErrorAsDataURL(err error) template.URL {
+	return template.URL("data:text/plain;base64," + base64.RawStdEncoding.EncodeToString([]byte(err.Error())))
+}
+
 func formatImage(src *image.RGBA) template.URL {
 	enlarge, space := 16, 2
 	if src == nil {
@@ -186,13 +201,74 @@ func formatImage(src *image.RGBA) template.URL {
 			}
 		}
 	}
-
 	buf := new(bytes.Buffer)
 	if err := png.Encode(buf, img); err != nil {
 		log.Printf("problem encoding image: %v", err)
-		return template.URL("data:text/plain,error")
+		return ErrorAsDataURL(err)
 	}
-	return template.URL("data:image/png;base64," + base64.RawStdEncoding.EncodeToString(buf.Bytes()))
+	return ImageAsDataURL(buf.Bytes())
 }
 
-func formatFloat3(x float64) string { return fmt.Sprintf("%.3f", x) }
+func formatSkyView(ss []gpsd.Satellite) template.URL {
+	if len(ss) == 0 {
+		ss = []gpsd.Satellite{{PRN: 0, Az: 0, El: 0, Ss: 0, Used: false}}
+	}
+	input := strings.NewReader(`set term png transparent
+set angles degrees
+set polar
+set grid polar 15
+unset border
+unset param
+unset xtics
+unset ytics
+unset key
+unset title
+unset colorbox
+set size square
+set theta clockwise top
+set rrange [0:90]
+set trange [0:360]
+set cbrange [0:210]
+set rtics (10,20,30,40,50,60,70,80,90)
+set ttics 0,30 format "%g".GPVAL_DEGREE_SIGN font ":Italic"
+set mttics 3
+set palette defined (0 "green", 64 "blue", 210 "red")
+plot "/dev/fd/3" using 1:2:3:4 with circles lc palette, "/dev/fd/4" using 1:2:3:4 with circles lc palette fill solid
+`)
+	unusedR, unusedW, err := os.Pipe()
+	if err != nil {
+		log.Printf("make 'unused' data pipe: %v", err)
+		return ErrorAsDataURL(err)
+	}
+	usedR, usedW, err := os.Pipe()
+	if err != nil {
+		log.Printf("make 'used' data pipe: %v", err)
+		return ErrorAsDataURL(err)
+	}
+
+	go func() {
+		for _, s := range ss {
+			w := unusedW
+			if s.Used {
+				w = usedW
+			}
+			w.WriteString(fmt.Sprintf("%v %v %v %v\n", s.Az, s.El, s.Ss/10, s.PRN))
+		}
+		usedW.Close()
+		unusedW.Close()
+	}()
+
+	ctx, c := context.WithTimeout(context.Background(), 5*time.Second)
+	defer c()
+	cmd := exec.CommandContext(ctx, "gnuplot")
+	cmd.Stdin = input
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.ExtraFiles = []*os.File{unusedR, usedR}
+	if err := cmd.Run(); err != nil {
+		log.Printf("problem running gnuplot: %v (%s)", err, stderr.String())
+		return ErrorAsDataURL(err)
+	}
+	return ImageAsDataURL(stdout.Bytes())
+}
