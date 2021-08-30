@@ -50,9 +50,10 @@ func monitorGpsd(l trace.EventLog) {
 		}
 	})
 	log.Printf("starting gpsd watch loop")
+	watchCh := gps.Watch()
 	for {
 		select {
-		case <-gps.Watch():
+		case <-watchCh:
 			l.Errorf("gpsd watch stopped; restarting")
 			return
 		case <-time.After(time.Minute):
