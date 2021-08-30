@@ -1,6 +1,6 @@
 module github.com/jrockway/beaglebone-gps-clock
 
-go 1.13
+go 1.17
 
 require (
 	github.com/facebookincubator/ntp v0.0.0-20210811125121-43a17d4267ad
@@ -17,4 +17,17 @@ require (
 	periph.io/x/extra v0.0.0-20190805002851-353eec1a00ff
 	periph.io/x/host/v3 v3.7.0
 	periph.io/x/periph v3.6.2+incompatible
+)
+
+require (
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cespare/xxhash/v2 v2.1.0 // indirect
+	github.com/golang/protobuf v1.3.2 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
+	github.com/prometheus/common v0.7.0 // indirect
+	github.com/prometheus/procfs v0.0.5 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
+	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
+	periph.io/x/d2xx v0.0.1 // indirect
 )

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"log"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/goiot/devices/dotstar"
 	"golang.org/x/exp/io/spi"
+	"golang.org/x/exp/io/spi/driver"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
@@ -33,64 +33,75 @@ var myFont = &basicfont.Face{
 	},
 }
 
-func drawClock() error {
+type fakeSPI struct{}
+
+func (x fakeSPI) Open() (driver.Conn, error) { return x, nil }
+func (fakeSPI) Configure(k, v int) error     { return nil }
+func (fakeSPI) Tx(w, r []byte) error         { return nil }
+func (fakeSPI) Close() error                 { return nil }
+
+func drawClock() {
 	l := trace.NewEventLog("peripheral", "display")
 	l.Printf("open /dev/spidev0.0")
 	d, err := dotstar.Open(&spi.Devfs{Dev: "/dev/spidev0.0", Mode: spi.Mode3}, n)
 	if err != nil {
 		l.Errorf("open dotstar: %v", err)
-		return fmt.Errorf("open dotstar: %w", err)
+		log.Printf("open dotstar: %v; continuing using dummy SPI driver", err)
+		d, _ = dotstar.Open(fakeSPI{}, n)
 	}
 
 	// Blank the display.
 	for i := 0; i < 6*8*8; i++ {
 		d.SetRGBA(i, dotstar.RGBA{R: 0, G: 0, B: 0, A: 0})
 	}
-	d.Draw()
+	if err := d.Draw(); err != nil {
+		l.Errorf("blank display: %v", err)
+	}
 
 	log.Printf("starting clock update loop")
-	go func() {
-		for {
-			// Render the current time.
-			img := image.NewRGBA(image.Rect(0, 0, 48, 8))
-			(&font.Drawer{
-				Dst:  img,
-				Src:  image.NewUniform(color.RGBA{R: 0x20, G: 0xa0, B: 0xff, A: 0xff}),
-				Face: myFont,
-				Dot:  fixed.Point26_6{X: fixed.Int26_6(0), Y: fixed.Int26_6(540)},
-			}).DrawString(time.Now().Format("15:04:05"))
-			for _, matrix := range []int{0, 2, 4} {
-				i := matrix * 64
-				for x := matrix * 8; x < (matrix+1)*8; x++ {
-					for y := 0; y < 8; y++ {
-						r, g, b, _ := img.At(x, y).RGBA()
-						scale := byte(4)
-						if matrix > 3 {
-							scale = 50
-						}
-						d.SetRGBA(i, dotstar.RGBA{R: byte(r) / scale, G: byte(g) / scale, B: byte(b) / scale, A: 5})
-						i++
+	for {
+		// Render the current time.
+		now := time.Now().Format("15:04:05")
+		img := image.NewRGBA(image.Rect(0, 0, 48, 8))
+		(&font.Drawer{
+			Dst:  img,
+			Src:  image.NewUniform(color.RGBA{R: 0x20, G: 0xa0, B: 0xff, A: 0xff}),
+			Face: myFont,
+			Dot:  fixed.Point26_6{X: fixed.Int26_6(0), Y: fixed.Int26_6(540)},
+		}).DrawString(now)
+		for _, matrix := range []int{0, 2, 4} {
+			i := matrix * 64
+			for x := matrix * 8; x < (matrix+1)*8; x++ {
+				for y := 0; y < 8; y++ {
+					r, g, b, _ := img.At(x, y).RGBA()
+					scale := byte(4)
+					if matrix > 3 {
+						scale = 50
 					}
+					d.SetRGBA(i, dotstar.RGBA{R: byte(r) / scale, G: byte(g) / scale, B: byte(b) / scale, A: 5})
+					i++
 				}
 			}
-			for _, matrix := range []int{1, 3, 5} {
-				i := matrix * 64
-				for x := (matrix+1)*8 - 1; x >= matrix*8; x-- {
-					for y := 7; y >= 0; y-- {
-						r, g, b, _ := img.At(x, y).RGBA()
-						scale := byte(4)
-						if matrix > 3 {
-							scale = 50
-						}
-						d.SetRGBA(i, dotstar.RGBA{R: byte(r) / scale, G: byte(g) / scale, B: byte(b) / scale, A: 5})
-						i++
-					}
-				}
-			}
-			d.Draw()
-			l.Printf("sleeping for %s", time.Until(time.Now().Add(time.Second).Truncate(time.Second)).String())
-			time.Sleep(time.Until(time.Now().Add(time.Second).Truncate(time.Second)))
 		}
-	}()
-	return nil
+		for _, matrix := range []int{1, 3, 5} {
+			i := matrix * 64
+			for x := (matrix+1)*8 - 1; x >= matrix*8; x-- {
+				for y := 7; y >= 0; y-- {
+					r, g, b, _ := img.At(x, y).RGBA()
+					scale := byte(4)
+					if matrix > 3 {
+						scale = 50
+					}
+					d.SetRGBA(i, dotstar.RGBA{R: byte(r) / scale, G: byte(g) / scale, B: byte(b) / scale, A: 5})
+					i++
+				}
+			}
+		}
+		if err := d.Draw(); err != nil {
+			l.Errorf("draw clock: %v", err)
+		}
+		UpdateStatus(Status{ClockFace: img})
+		l.Printf("sleeping for %s", time.Until(time.Now().Add(time.Second).Truncate(time.Second)).String())
+		time.Sleep(time.Until(time.Now().Add(time.Second).Truncate(time.Second)))
+	}
 }

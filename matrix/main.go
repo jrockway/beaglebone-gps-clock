@@ -29,15 +29,15 @@ func main() {
 		if err := monitorSensors(i2cBus); err != nil {
 			log.Fatalf("init sensors: %v", err)
 		}
-
-		if err := drawClock(); err != nil {
-			log.Fatalf("init clock: %v", err)
-		}
-
 	}
+
+	go drawClock()
 	go watchGpsd()
 	go watchChrony()
 
 	log.Println("listening on :8080")
-	http.ListenAndServe("0.0.0.0:8080", nil)
+	http.HandleFunc("/", ServeStatus)
+	if err := http.ListenAndServe("0.0.0.0:8080", nil); err != nil {
+		log.Println(err)
+	}
 }

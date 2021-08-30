@@ -99,10 +99,10 @@ type Register uint8
 
 const (
 	RegisterDeviceID Register = 0x12
-	RegisterEnable            = 0x00
-	RegisterControl           = 0x01
-	RegisterChan0Low          = 0x14
-	RegisterChan1Low          = 0x16
+	RegisterEnable   Register = 0x00
+	RegisterControl  Register = 0x01
+	RegisterChan0Low Register = 0x14
+	RegisterChan1Low Register = 0x16
 )
 
 type Gain uint8
@@ -115,7 +115,7 @@ const (
 )
 
 const (
-	CommandEnablePowerOff = 0x00
+	CommandEnablePowerOff = 0x00 // nolint:deadcode
 	CommandEnablePowerOn  = 0x01
 	CommandEnableAEN      = 0x02
 	CommandEnableAIEN     = 0x10

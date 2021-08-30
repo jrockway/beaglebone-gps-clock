@@ -54,6 +54,7 @@ func monitorChrony(l trace.EventLog) error {
 		}
 		tracking, ok := tres.(*chrony.ReplyTracking)
 		if ok {
+			UpdateStatus(Status{Tracking: *tracking, Now: time.Now()})
 			l.Printf("tracking: %#v", tracking)
 			line := fmt.Sprintf(`tracking,machine=%s ref_id="%x",stratum=%vu,leap_status=%vu,reftime=%vu,correction=%v,offset=%v,rms_offset=%v,freq_ppm=%v,residual_freq_ppm=%v,skew=%v,root_delay=%v,root_dispersion=%v,update_interval=%v %v`, source, tracking.RefID, tracking.Stratum, tracking.LeapStatus, tracking.RefTime.UnixNano(), tracking.CurrentCorrection, tracking.LastOffset, tracking.RMSOffset, tracking.FreqPPM, tracking.ResidFreqPPM, tracking.SkewPPM, tracking.RootDelay, tracking.LastUpdateInterval, tracking.RootDispersion, ts)
 			if err := sendToInflux(line); err != nil {
@@ -76,6 +77,7 @@ func monitorChrony(l trace.EventLog) error {
 			l.Errorf("sources reply was of unexpected type: %#v", ssres)
 			sources = 0
 		}
+		var sourcesCopy []chrony.ReplySourceData
 		for i := 0; i < sources; i++ {
 			sreq := chrony.NewSourceDataPacket(int32(i))
 			sres, err := c.Communicate(sreq)
@@ -87,12 +89,14 @@ func monitorChrony(l trace.EventLog) error {
 				l.Errorf("source %v: source reply was of unexpected type: %#v", i, sres)
 				continue
 			}
+			sourcesCopy = append(sourcesCopy, *s)
 			l.Printf("source %d (%v): %#v", i, refID(s.IPAddr), s)
 			line := fmt.Sprintf("source,machine=%s,source=%s poll=%vi,stratum=%vu,state=%vu,mode=%vu,flags=%vu,reachability=%vu,since_sample=%vu,orig_latest_meas=%v,latest_meas=%v,latest_meas_err=%v %v", source, refID(s.IPAddr), s.Poll, s.Stratum, s.State, s.Mode, s.Flags, s.Reachability, s.SinceSample, s.OrigLatestMeas, s.LatestMeas, s.LatestMeasErr, ts)
 			if err := sendToInflux(line); err != nil {
 				l.Errorf("source %v: problem sending to influx: %v", i, err)
 			}
 		}
+		UpdateStatus(Status{Sources: sourcesCopy})
 	}
 }
 
