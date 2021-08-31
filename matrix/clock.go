@@ -42,8 +42,8 @@ func (fakeSPI) Close() error                 { return nil }
 
 func drawClock() {
 	l := trace.NewEventLog("peripheral", "display")
-	l.Printf("open /dev/spidev0.0")
-	d, err := dotstar.Open(&spi.Devfs{Dev: "/dev/spidev0.0", Mode: spi.Mode3}, n)
+	l.Printf("open /dev/spidev1.0")
+	d, err := dotstar.Open(&spi.Devfs{Dev: "/dev/spidev1.0", Mode: spi.Mode3}, n)
 	if err != nil {
 		l.Errorf("open dotstar: %v", err)
 		log.Printf("open dotstar: %v; continuing using dummy SPI driver", err)
