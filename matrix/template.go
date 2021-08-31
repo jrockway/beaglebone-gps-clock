@@ -225,13 +225,13 @@ unset key
 unset title
 unset colorbox
 set size square
-set theta clockwise top
-set rrange [0:90]
+set theta clockwise top # <-- newer gnuplot required
+set rrange [90:-0.1]
 set trange [0:360]
 set cbrange [0:210]
-set rtics (10,20,30,40,50,60,70,80,90)
-set ttics 0,30 format "%g".GPVAL_DEGREE_SIGN font ":Italic"
-set mttics 3
+set rtics (0,10,20,30,40,50,60,70,80,90)
+set ttics 0,30 format "%g".GPVAL_DEGREE_SIGN # <-- newer gnuplot required
+set mttics 3 # <-- newer gnuplot required
 set palette defined (0 "green", 64 "blue", 210 "red")
 plot "/dev/fd/3" using 1:2:3:4 with circles lc palette, "/dev/fd/4" using 1:2:3:4 with circles lc palette fill solid
 `)
