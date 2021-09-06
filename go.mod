@@ -31,3 +31,7 @@ require (
 	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
 	periph.io/x/d2xx v0.0.1 // indirect
 )
+
+replace (
+	github.com/facebookincubator/ntp => ../ntp
+)

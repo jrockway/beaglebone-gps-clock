@@ -27,9 +27,14 @@ Leap status     : {{ .Tracking.LeapStatus | leap }}
 </pre>
 <h3>Sources</h3>
 <pre>
-MS Name/IP address         Stratum Poll      Reach        LastRx                                      Last sample
+MS Name/IP address         Stratum Poll      Reach         LastRx                                     Last sample
 =================================================================================================================
-{{ range .Sources }}{{ . | source }}{{ end }}
+{{ range .Sources }}{{ .Data | sourcedata }}{{ end }}
+</pre>
+<pre>
+Name/IP Address              NP  NR           Span  Frequency  Freq Skew        Offset       Std Dev
+====================================================================================================
+{{ range .Sources }}{{ .Stats | sourcestats }}{{ end }}
 </pre>
 
 <h2>Satellites</h2>

@@ -12,6 +12,12 @@ import (
 
 const source = "beaglebone"
 
+type SourceInfo struct {
+	Index int
+	Data  chrony.SourceData
+	Stats chrony.SourceStats
+}
+
 func watchChrony() {
 	l := trace.NewEventLog("service", "chrony")
 	defer l.Finish()
@@ -67,38 +73,62 @@ func monitorChrony(l trace.EventLog) error {
 		}
 
 		ssreq := chrony.NewSourcesPacket()
-		ssres, err := c.Communicate(ssreq)
+		sres, err := c.Communicate(ssreq)
 		if err != nil {
 			return fmt.Errorf("get sources: %w", err)
 		}
 		var sources int
-		if ss, ok := ssres.(*chrony.ReplySources); ok {
-			l.Printf("sources: %#v", ss)
-			sources = ss.NSources
+		if s, ok := sres.(*chrony.ReplySources); ok {
+			l.Printf("sources: %#v", s)
+			sources = s.NSources
 		} else {
-			l.Errorf("sources reply was of unexpected type: %#v", ssres)
+			l.Errorf("sources reply was of unexpected type: %#v", sres)
 			sources = 0
 		}
-		var sourcesCopy []chrony.ReplySourceData
+
+		// Chrony seems to keep sources sorted consistently in its own output, so I assume
+		// its internal representation allows it to return matching source data and
+		// sourcestats for lookups of the same index.  Not so sure that I wouldn't not write
+		// this comment though I guess.
+		var info []SourceInfo
 		for i := 0; i < sources; i++ {
-			sreq := chrony.NewSourceDataPacket(int32(i))
-			sres, err := c.Communicate(sreq)
+			// Get source data.
+			sdreq := chrony.NewSourceDataPacket(int32(i))
+			sdres, err := c.Communicate(sdreq)
 			if err != nil {
 				return fmt.Errorf("get sources: %w", err)
 			}
-			s, ok := sres.(*chrony.ReplySourceData)
+			sd, ok := sdres.(*chrony.ReplySourceData)
 			if !ok {
-				l.Errorf("source %v: source reply was of unexpected type: %#v", i, sres)
+				l.Errorf("source %v: source data reply was of unexpected type: %#v", i, sdres)
 				continue
 			}
-			sourcesCopy = append(sourcesCopy, *s)
-			l.Printf("source %d (%v): %#v", i, refID(s.IPAddr), s)
-			line := fmt.Sprintf("source,machine=%s,source=%s poll=%vi,stratum=%vu,state=%vu,mode=%vu,flags=%vu,reachability=%vu,since_sample=%vu,orig_latest_meas=%v,latest_meas=%v,latest_meas_err=%v %v", source, refID(s.IPAddr), s.Poll, s.Stratum, s.State, s.Mode, s.Flags, s.Reachability, s.SinceSample, s.OrigLatestMeas, s.LatestMeas, s.LatestMeasErr, ts)
+
+			// Get sourcestats.
+			ssreq := chrony.NewSourceStatsPacket(int32(i))
+			ssres, err := c.Communicate(ssreq)
+			if err != nil {
+				return fmt.Errorf("get sourcestats: %w", err)
+			}
+			ss, ok := ssres.(*chrony.ReplySourceStats)
+			if !ok {
+				l.Errorf("source %v: sourcestats reply was of unexpected type: %#v", i, ssres)
+				continue
+			}
+
+			// Send both as one row.
+			l.Printf("source %v (%v):\n    data: %#v\n    stats: %#v", i, refID(sd.IPAddr), sd, ss)
+			line := fmt.Sprintf("source,machine=%s,source=%s poll=%vi,stratum=%vu,state=%vu,mode=%vu,flags=%vu,reachability=%vu,since_sample=%vu,orig_latest_meas=%v,latest_meas=%v,latest_meas_err=%v,samples=%vu,runs=%vu,span=%vu,resid_freq_ppm=%v,skew_ppm=%v,estimated_offset=%v,estimated_offset_err=%v,standard_deviation=%v %v", source, refID(sd.IPAddr), sd.Poll, sd.Stratum, sd.State, sd.Mode, sd.Flags, sd.Reachability, sd.SinceSample, sd.OrigLatestMeas, sd.LatestMeas, sd.LatestMeasErr, ss.NSamples, ss.NRuns, ss.SpanSeconds, ss.ResidFreqPPM, ss.SkewPPM, ss.EstimatedOffset, ss.EstimatedOffsetErr, ss.StandardDeviation, ts)
 			if err := sendToInflux(line); err != nil {
 				l.Errorf("source %v: problem sending to influx: %v", i, err)
 			}
+			info = append(info, SourceInfo{
+				Index: i,
+				Data:  sd.SourceData,
+				Stats: ss.SourceStats,
+			})
 		}
-		UpdateStatus(Status{Sources: sourcesCopy})
+		UpdateStatus(Status{Sources: info})
 	}
 }
 
@@ -120,4 +150,8 @@ func refID(ip net.IP) string {
 		}
 	}
 	return ip.String()
+}
+
+func intRefID(ip uint32) string {
+	return refID(net.IPv4(byte((ip>>24)&0xff), byte((ip>>16)&0xff), byte((ip>>8)&0xff), byte(ip&0xff)))
 }

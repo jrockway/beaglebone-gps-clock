@@ -30,17 +30,18 @@ var (
 	//go:embed index.html.tmpl
 	indexHTML string
 	funcMap   = template.FuncMap{
-		"hex":        formatHex,
-		"unixtime":   formatUnixTime,
-		"refid":      formatRefID,
-		"duration":   formatDuration,
-		"float3":     formatFloat3,
-		"leap":       formatLeap,
-		"correction": formatCorrection,
-		"freq":       formatFreq,
-		"source":     formatSource,
-		"image":      formatImage,
-		"skyview":    formatSkyView,
+		"hex":         formatHex,
+		"unixtime":    formatUnixTime,
+		"refid":       formatRefID,
+		"duration":    formatDuration,
+		"float3":      formatFloat3,
+		"leap":        formatLeap,
+		"correction":  formatCorrection,
+		"freq":        formatFreq,
+		"sourcedata":  formatSourceData,
+		"sourcestats": formatSourceStats,
+		"image":       formatImage,
+		"skyview":     formatSkyView,
 	}
 	index = template.Must(template.New("index").Funcs(funcMap).Parse(indexHTML))
 )
@@ -49,7 +50,7 @@ type Status struct {
 	ClockFace  *image.RGBA
 	Now        time.Time
 	Tracking   chrony.ReplyTracking
-	Sources    []chrony.ReplySourceData
+	Sources    []SourceInfo
 	Satellites []gpsd.Satellite
 }
 
@@ -137,7 +138,7 @@ func formatFreq(x float64) string {
 	return fmt.Sprintf("%.3f ppm %s", x, fast)
 }
 
-func formatSource(x chrony.ReplySourceData) string {
+func formatSourceData(x chrony.SourceData) string {
 	mode, state := " ", " "
 	switch x.Mode {
 	case chrony.SourceModeClient:
@@ -175,6 +176,10 @@ func formatSource(x chrony.ReplySourceData) string {
 		name = name[:27]
 	}
 	return fmt.Sprintf("%s%s %-27s  %2d   %2d   %08b  %13s  %13s[%13s] +/- %13s\n", mode, state, name, x.Stratum, x.Poll, x.Reachability, time.Duration(1e9*x.SinceSample), time.Duration(1e9*x.LatestMeas), time.Duration(1e9*x.OrigLatestMeas), time.Duration(1e9*x.LatestMeasErr))
+}
+
+func formatSourceStats(x chrony.SourceStats) string {
+	return fmt.Sprintf("%-27s %3d %3d  %13s %+10.3f %10.3f %13s %13s\n", intRefID(x.RefID), x.NSamples, x.NRuns, time.Duration(1e9*x.SpanSeconds), x.ResidFreqPPM, x.SkewPPM, time.Duration(1e9*x.EstimatedOffset), time.Duration(1e9*x.StandardDeviation))
 }
 
 func ImageAsDataURL(bytes []byte) template.URL {
@@ -247,15 +252,17 @@ plot "/dev/fd/3" using 1:2:3:4 with circles lc palette, "/dev/fd/4" using 1:2:3:
 	}
 
 	go func() {
+		defer usedW.Close()
+		defer unusedW.Close()
 		for _, s := range ss {
 			w := unusedW
 			if s.Used {
 				w = usedW
 			}
-			w.WriteString(fmt.Sprintf("%v %v %v %v\n", s.Az, s.El, s.Ss/10, s.PRN))
+			if _, err := w.WriteString(fmt.Sprintf("%v %v %v %v\n", s.Az, s.El, s.Ss/10, s.PRN)); err != nil {
+				return
+			}
 		}
-		usedW.Close()
-		unusedW.Close()
 	}()
 
 	ctx, c := context.WithTimeout(context.Background(), 5*time.Second)
