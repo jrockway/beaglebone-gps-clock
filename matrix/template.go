@@ -179,7 +179,7 @@ func formatSourceData(x chrony.SourceData) string {
 }
 
 func formatSourceStats(x chrony.SourceStats) string {
-	return fmt.Sprintf("%-27s %3d %3d  %13s %+10.3f %10.3f %13s %13s\n", intRefID(x.RefID), x.NSamples, x.NRuns, time.Duration(1e9*x.SpanSeconds), x.ResidFreqPPM, x.SkewPPM, time.Duration(1e9*x.EstimatedOffset), time.Duration(1e9*x.StandardDeviation))
+	return fmt.Sprintf("%-27s %3d %3d  %13s %+10.3f %10.3f %13s %13s\n", intRefID(x.RefID), x.NSamples, x.NRuns, time.Duration(x.SpanSeconds)*1e9, x.ResidFreqPPM, x.SkewPPM, time.Duration(1e9*x.EstimatedOffset), time.Duration(1e9*x.StandardDeviation))
 }
 
 func ImageAsDataURL(bytes []byte) template.URL {
