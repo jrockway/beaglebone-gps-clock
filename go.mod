@@ -3,7 +3,7 @@ module github.com/jrockway/beaglebone-gps-clock
 go 1.17
 
 require (
-	github.com/facebookincubator/ntp v0.0.0-20210811125121-43a17d4267ad
+	github.com/facebookincubator/ntp v0.0.0-20210907170534-ff372212bf23
 	github.com/fulr/spidev v0.0.0-20150210165549-524e13e3fac2
 	github.com/goiot/devices v0.0.0-20160708214026-09d1226fc8ea
 	github.com/jrockway/periphflag v0.0.0-20191020104359-a1cd7211ce99
@@ -30,8 +30,4 @@ require (
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
 	periph.io/x/d2xx v0.0.1 // indirect
-)
-
-replace (
-	github.com/facebookincubator/ntp => ../ntp
 )
