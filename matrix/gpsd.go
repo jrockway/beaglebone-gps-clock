@@ -46,9 +46,9 @@ func monitorGpsd(l trace.EventLog) {
 			if s.Used {
 				used = "1u"
 			}
-			buf.WriteString(fmt.Sprintf("satellite,prn=%v azimuth=%v,elevation=%v,snr=%v,used=%v %v\n", s.PRN, s.Az, s.El, s.Ss, used, t.UnixNano()))
+			buf.WriteString(fmt.Sprintf("satellite,device=%v,prn=%v azimuth=%v,elevation=%v,snr=%v,used=%v %v\n", sky.Device, s.PRN, s.Az, s.El, s.Ss, used, t.UnixNano()))
 		}
-		buf.WriteString(fmt.Sprintf("dop xdop=%v,ydop=%v,vdop=%v,tdop=%v,hdop=%v,pdop=%v,gdop=%v %v\n", sky.Xdop, sky.Ydop, sky.Vdop, sky.Tdop, sky.Hdop, sky.Pdop, sky.Gdop, t.UnixNano()))
+		buf.WriteString(fmt.Sprintf("dop,device=%v xdop=%v,ydop=%v,vdop=%v,tdop=%v,hdop=%v,pdop=%v,gdop=%v %v\n", sky.Device, sky.Xdop, sky.Ydop, sky.Vdop, sky.Tdop, sky.Hdop, sky.Pdop, sky.Gdop, t.UnixNano()))
 		if err := sendToInflux(buf.String()); err != nil {
 			l.Errorf("write satellite status to influx: %v", err)
 			return
