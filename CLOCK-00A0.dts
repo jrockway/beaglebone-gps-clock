@@ -15,7 +15,8 @@
         exclusive-use =
                 "P9.11", "P9.13", "P9.15", "uart4", // gps and pps
                 "P9.17", "P9.18", "P9.21", "P9.22", "spi0", // spi display
-                "P9.19", "P9.20", "i2c2", "P9.12", "P9.14"; // rtc
+                "P9.19", "P9.20", "i2c2", "P9.12", "P9.14", // rtc (2 pps pins, DS3231's 32KHz and SQW)
+		"P9.24", "P9.26", "P9.23", "uart1"; // gps2 and pps
 
         fragment@0 {
                 target = <&ocp>;
@@ -33,6 +34,10 @@
                         P9_20_pinmux { status = "disabled"; };
                         P9_12_pinmux { status = "disabled"; };
                         P9_14_pinmux { status = "disabled"; };
+
+                        P9_24_pinmux { status = "disabled"; };
+                        P9_26_pinmux { status = "disabled"; };
+                        P9_23_pinmux { status = "disabled"; };			
                 };
         };
 
@@ -51,6 +56,19 @@
                                         BONE_P9_15 (PIN_INPUT_PULLDOWN | MUX_MODE7)
                                 >;
                         };
+
+			bb_uart1_pins: pinmux_bb_uart1_pins {
+                                pinctrl-single,pins = <
+                                        BONE_P9_24 (PIN_OUTPUT | MUX_MODE0)
+                                        BONE_P9_26 (PIN_INPUT | MUX_MODE0)
+                                >;
+			};
+
+			bb_gps2_pps_pins: pinmux_bb_gps2_pps_pins {
+                                pinctrl-single,pins = <
+                                        BONE_P9_23 (PIN_INPUT_PULLDOWN | MUX_MODE7)
+                                >;
+			};
 
                         bb_spi0_pins: pinmux_bb_spi0_pins {
                                 pinctrl-single,pins = <
@@ -91,6 +109,15 @@
                };
         };
 
+	fragment@12 {
+		target = <&uart1>;
+		__overlay__ {
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&bb_uart1_pins>;
+		};
+	};
+
         fragment@3 {
                 target = <&ocp>;
                 __overlay__ {
@@ -109,6 +136,14 @@
                                 pinctrl-0 = <&bb_rtc_pps_pins>;
                                 gpios = <&gpio1 18 0>;
                         };
+			
+			gps2_pps {
+                                status = "okay";
+                                compatible = "pps-gpio";
+                                pinctrl-names = "default";
+                                pinctrl-0 = <&bb_gps2_pps_pins>;
+                                gpios = <&gpio1 17 0>;			
+			};				
                 };
         };
 
