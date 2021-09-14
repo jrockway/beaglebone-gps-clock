@@ -40,6 +40,18 @@ func (fakeSPI) Configure(k, v int) error     { return nil }
 func (fakeSPI) Tx(w, r []byte) error         { return nil }
 func (fakeSPI) Close() error                 { return nil }
 
+func getClockImage(t time.Time) *image.RGBA {
+	now := t.Format("15:04:05")
+	img := image.NewRGBA(image.Rect(0, 0, 48, 8))
+	(&font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(color.RGBA{R: 0x20, G: 0xa0, B: 0xff, A: 0xff}),
+		Face: myFont,
+		Dot:  fixed.Point26_6{X: fixed.Int26_6(0), Y: fixed.Int26_6(540)},
+	}).DrawString(now)
+	return img
+}
+
 func drawClock() {
 	dev := "/dev/spidev0.0"
 	l := trace.NewEventLog("peripheral", "display")
@@ -62,14 +74,7 @@ func drawClock() {
 	log.Printf("starting clock update loop")
 	for {
 		// Render the current time.
-		now := time.Now().Format("15:04:05")
-		img := image.NewRGBA(image.Rect(0, 0, 48, 8))
-		(&font.Drawer{
-			Dst:  img,
-			Src:  image.NewUniform(color.RGBA{R: 0x20, G: 0xa0, B: 0xff, A: 0xff}),
-			Face: myFont,
-			Dot:  fixed.Point26_6{X: fixed.Int26_6(0), Y: fixed.Int26_6(540)},
-		}).DrawString(now)
+		img := getClockImage(time.Now())
 		for _, matrix := range []int{0, 2, 4} {
 			i := matrix * 64
 			for x := matrix * 8; x < (matrix+1)*8; x++ {

@@ -43,6 +43,7 @@ var (
 		"sourcestats": formatSourceStats,
 		"image":       formatImage,
 		"skyview":     formatSkyView,
+		"deviation":   formatDeviation,
 	}
 	index = template.Must(template.New("index").Funcs(funcMap).Parse(indexHTML))
 )
@@ -52,12 +53,18 @@ type Satellite struct {
 	Time time.Time
 }
 
+type PositionHistory struct {
+	Current, Max                  int
+	Latitude, Longitude, Altitude [32768]float64
+}
+
 type Status struct {
 	ClockFace    *image.RGBA
 	Now          time.Time
 	Tracking     chrony.ReplyTracking
 	Sources      []SourceInfo
 	SatsByDevice map[string]map[float64]Satellite
+	PosByDevice  map[string]*PositionHistory
 }
 
 func UpdateStatus(newStatus Status) {
@@ -99,6 +106,32 @@ func AddSatellite(device string, s gpsd.Satellite) {
 	status.SatsByDevice[device][s.PRN] = Satellite{
 		Time:      time.Now(),
 		Satellite: s,
+	}
+}
+
+func AddPosition(device string, lat, lon, alt float64) {
+	statusMu.Lock()
+	defer statusMu.Unlock()
+	if lat == 0 || lon == 0 || alt == 0 {
+		// Skip invalid fixes.
+		return
+	}
+	if status.PosByDevice == nil {
+		status.PosByDevice = make(map[string]*PositionHistory)
+	}
+	if _, ok := status.PosByDevice[device]; !ok {
+		status.PosByDevice[device] = &PositionHistory{}
+	}
+	history := status.PosByDevice[device]
+	history.Latitude[history.Current] = lat
+	history.Longitude[history.Current] = lon
+	history.Altitude[history.Current] = alt
+	history.Current++
+	if history.Max < history.Current {
+		history.Max = history.Current
+	}
+	if history.Current >= len(history.Latitude) {
+		history.Current = 0
 	}
 }
 
@@ -352,6 +385,45 @@ plot "/dev/fd/3" using 1:2:3:4 with circles lc palette, "/dev/fd/4" using 1:2:3:
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.ExtraFiles = []*os.File{unusedR, usedR}
+	if err := cmd.Run(); err != nil {
+		log.Printf("problem running gnuplot: %v (%s)", err, stderr.String())
+		return ErrorAsDataURL(err)
+	}
+	return ImageAsDataURL(stdout.Bytes())
+}
+
+func formatDeviation(h *PositionHistory) template.URL {
+	input := strings.NewReader(`set term png transparent
+unset border
+unset xtics
+unset ytics
+unset key
+unset title
+unset colorbox
+set size square
+plot "/dev/fd/3"
+`)
+	dataR, dataW, err := os.Pipe()
+	if err != nil {
+		log.Printf("make data pipe: %v", err)
+		return ErrorAsDataURL(err)
+	}
+	go func() {
+		defer dataW.Close()
+		for i := 0; i < h.Max; i++ {
+			if _, err := dataW.WriteString(fmt.Sprintf("%v %v\n", h.Longitude[i], h.Latitude[i])); err != nil {
+				return
+			}
+		}
+	}()
+	ctx, c := context.WithTimeout(context.Background(), 5*time.Second)
+	defer c()
+	cmd := exec.CommandContext(ctx, "gnuplot")
+	cmd.Stdin = input
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.ExtraFiles = []*os.File{dataR}
 	if err := cmd.Run(); err != nil {
 		log.Printf("problem running gnuplot: %v (%s)", err, stderr.String())
 		return ErrorAsDataURL(err)

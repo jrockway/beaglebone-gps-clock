@@ -28,6 +28,24 @@ func monitorGpsd(l trace.EventLog) {
 		l.Errorf("dial gpsd: %v", err)
 		return
 	}
+	gps.AddFilter("TPV", func(r interface{}) {
+		t := time.Now()
+		tpv, ok := r.(*gpsd.TPVReport)
+		if !ok {
+			l.Errorf("not a TPVReport: %#v", r)
+		}
+		select {
+		case watchdog <- struct{}{}:
+		default:
+		}
+		l.Printf("tpv report: %#v", tpv)
+		AddPosition(tpv.Device, tpv.Lat, tpv.Lon, tpv.Alt)
+		msg := fmt.Sprintf("tpv,device=%v lat=%v,lon=%v,alt=%v %v\n", tpv.Device, tpv.Lat, tpv.Lon, tpv.Alt, t.UnixNano())
+		if err := sendToInflux(msg); err != nil {
+			l.Errorf("write tpv report to influx: %v", err)
+			return
+		}
+	})
 	gps.AddFilter("SKY", func(r interface{}) {
 		t := time.Now()
 		sky, ok := r.(*gpsd.SKYReport)
