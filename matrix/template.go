@@ -401,6 +401,11 @@ unset key
 unset title
 unset colorbox
 set size square
+set yrange [40.69750:40.69790]
+set xrange [-73.9940:-73.9930]
+set xtics border mirror format "" 0.0001 # about 10 meters of longitude
+set ytics border mirror format "" 0.0001 # about 10 meters of latitude
+set grid
 plot "/dev/fd/3"
 `)
 	dataR, dataW, err := os.Pipe()
