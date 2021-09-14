@@ -6,9 +6,9 @@ require (
 	github.com/facebookincubator/ntp v0.0.0-20210907170534-ff372212bf23
 	github.com/fulr/spidev v0.0.0-20150210165549-524e13e3fac2
 	github.com/goiot/devices v0.0.0-20160708214026-09d1226fc8ea
+	github.com/jrockway/go-gpsd v0.0.0-20210914052111-4bc2d052dcac
 	github.com/jrockway/periphflag v0.0.0-20191020104359-a1cd7211ce99
 	github.com/prometheus/client_golang v1.2.1
-	github.com/stratoberry/go-gpsd v0.0.0-20161204231141-54ddcfa61f47
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777

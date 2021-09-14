@@ -122,6 +122,8 @@ github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/J
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
 github.com/josharian/native v0.0.0-20200817173448-b6b71def0850/go.mod h1:7X/raswPFr05uY3HiLlYeyQntB6OO7E/d2Cu7qoaN2w=
+github.com/jrockway/go-gpsd v0.0.0-20210914052111-4bc2d052dcac h1:GhOghmrlk3gRUUkobfyvVJWdcrknlOcbE3sQfoShBoU=
+github.com/jrockway/go-gpsd v0.0.0-20210914052111-4bc2d052dcac/go.mod h1:siw+nwSumu6Hp3QGVCyYCRnAH02ibC/i7bz8UWUm8Qc=
 github.com/jrockway/periphflag v0.0.0-20191020104359-a1cd7211ce99 h1:bLp79WmX3HmBzCcEwFNlKSerbRoNUXo5Jh++tah2J1M=
 github.com/jrockway/periphflag v0.0.0-20191020104359-a1cd7211ce99/go.mod h1:mr6nmr5YIhXQuaBBW10uwtOnCXTVi6UL7GL3nFiiUo8=
 github.com/jsimonetti/rtnetlink v0.0.0-20190606172950-9527aa82566a/go.mod h1:Oz+70psSo5OFh8DBl0Zv2ACw7Esh6pPUphlvZG9x7uw=
@@ -232,8 +234,6 @@ github.com/spf13/jwalterweatherman v1.0.0/go.mod h1:cQK4TGJAtQXfYWX+Ddv3mKDzgVb6
 github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spf13/viper v1.7.0/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5qpdg=
-github.com/stratoberry/go-gpsd v0.0.0-20161204231141-54ddcfa61f47 h1:VrBVsttOEYT6UQZ0yv0D+Dg+TBPnvDB3bdiNdmiUFsQ=
-github.com/stratoberry/go-gpsd v0.0.0-20161204231141-54ddcfa61f47/go.mod h1:AiDv9UF/0tKQBVmL7iojbxXhq36cY1/El3AuhfCK2Co=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=

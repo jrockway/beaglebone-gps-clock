@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/facebookincubator/ntp/protocol/chrony"
-	"github.com/stratoberry/go-gpsd"
+	"github.com/jrockway/go-gpsd"
 )
 
 var (

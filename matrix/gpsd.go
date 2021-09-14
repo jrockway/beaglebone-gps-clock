@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stratoberry/go-gpsd"
+	"github.com/jrockway/go-gpsd"
 	"golang.org/x/net/trace"
 )
 
