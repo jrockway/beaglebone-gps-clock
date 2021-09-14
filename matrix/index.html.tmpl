@@ -38,26 +38,52 @@ Name/IP Address              NP  NR           Span  Frequency  Freq Skew        
 </pre>
 
 <h2>Satellites</h2>
-<img src="{{ .Satellites | skyview }}" />
 <table>
+  {{/* header -> device name */}}
   <thead>
     <tr>
-      <td>PRN</td>
-      <td>Azimuth</td>
-      <td>Elevation</td>
-      <td>Signal strength</td>
-      <td>Used?<td>
+      {{ range $dev, $ss := .SatsByDevice }}
+      <th scope="col" width="640" colspan="5">{{ $dev }}</th>
+      {{ end }}
     </tr>
   </thead>
-{{ range .Satellites }}
-<tr>
-  <td>{{.PRN}}</td>
-  <td>{{.Az}}</td>
-  <td>{{.El}}</td>
-  <td>{{.Ss}}</td>
-  <td>{{.Used}}<td>
-</tr>
-{{ end }}
+  {{/* first table row -> sky view image */}}
+  <tr>
+    {{ range $dev, $ss := .SatsByDevice }}
+    <td colspan="5">
+      <img src="{{ $ss | skyview }}" />
+    </td>
+    {{ end }}
+  </tr>
+  {{/* second table row -> satellite info table header */}}
+  <tr style="text-align: left;">
+    {{ range .SatsByDevice }}
+    <th scope="col" style="padding-left: 100px;">PRN</th>
+    <th scope="col">Azimuth</th>
+    <th scope="col">Elevation</th>
+    <th scope="col">Signal strength</th>
+    <th scope="col" style="padding-right: 100px;">Used?</th>
+    {{ end }}
+  </tr>
+  {{ range .SatellitesInConvenientForm }}
+  <tr>
+    {{ range . }}
+    {{ if not .Time.IsZero }}
+    <td style="padding-left: 100px;">{{.PRN}}</td>
+    <td>{{.Az}}</td>
+    <td>{{.El}}</td>
+    <td>{{.Ss}}</td>
+    <td style="padding-right: 100px;">{{.Used}}</td>
+    {{ else }}
+    <td style="padding-left: 100px;"></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td style="padding-right: 100px;"></td>
+    {{ end }}
+    {{ end }}
+  </tr>
+  {{ end }}
 </table>
 </body>
 </html>

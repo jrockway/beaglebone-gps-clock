@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -46,12 +47,17 @@ var (
 	index = template.Must(template.New("index").Funcs(funcMap).Parse(indexHTML))
 )
 
+type Satellite struct {
+	gpsd.Satellite
+	Time time.Time
+}
+
 type Status struct {
-	ClockFace  *image.RGBA
-	Now        time.Time
-	Tracking   chrony.ReplyTracking
-	Sources    []SourceInfo
-	Satellites []gpsd.Satellite
+	ClockFace    *image.RGBA
+	Now          time.Time
+	Tracking     chrony.ReplyTracking
+	Sources      []SourceInfo
+	SatsByDevice map[string]map[float64]Satellite
 }
 
 func UpdateStatus(newStatus Status) {
@@ -69,9 +75,78 @@ func UpdateStatus(newStatus Status) {
 	if !newStatus.Now.IsZero() {
 		status.Now = newStatus.Now
 	}
-	if len(newStatus.Satellites) > 0 {
-		status.Satellites = newStatus.Satellites
+}
+
+func AddSatellite(device string, s gpsd.Satellite) {
+	statusMu.Lock()
+	defer statusMu.Unlock()
+	// Make sure map is initialized.
+	if status.SatsByDevice == nil {
+		status.SatsByDevice = make(map[string]map[float64]Satellite)
 	}
+	if _, ok := status.SatsByDevice[device]; !ok {
+		status.SatsByDevice[device] = make(map[float64]Satellite)
+	}
+	// Cleanup satellites that have gone missing from recent reports.
+	for _, ss := range status.SatsByDevice {
+		for prn, s := range ss {
+			if time.Since(s.Time) > 60*time.Second {
+				delete(ss, prn)
+			}
+		}
+	}
+	// Finally, add this report.
+	status.SatsByDevice[device][s.PRN] = Satellite{
+		Time:      time.Now(),
+		Satellite: s,
+	}
+}
+
+// SatellitesInConvenientForm returns satellites in a form convenient for our HTML template.
+//
+// Given {
+//     DeviceA: []{{1}, {2}, {3}, {4}},
+//     DeviceB: []{{5}, {6}}
+// }
+//
+// We return:
+// {
+//     {{1}, {5}},
+//     {{2}, {6}},
+//     {{3}, {}},
+//     {{4}, {}},
+// }
+//
+// The per-device columns are sorted by name, and the rows are sorted by PRN ascending.
+func (status Status) SatellitesInConvenientForm() [][]Satellite {
+	if status.SatsByDevice == nil {
+		return nil
+	}
+	max := 0
+	var devices []string
+	for dev, ss := range status.SatsByDevice {
+		if l := len(ss); l > max {
+			max = l
+		}
+		devices = append(devices, dev)
+	}
+	sort.Strings(devices)
+	result := make([][]Satellite, max)
+	for i := range result {
+		result[i] = make([]Satellite, len(devices))
+	}
+	for j, dev := range devices {
+		var prns []float64
+		ss := status.SatsByDevice[dev]
+		for prn := range ss {
+			prns = append(prns, prn)
+		}
+		sort.Float64s(prns)
+		for i, prn := range prns {
+			result[i][j] = ss[prn]
+		}
+	}
+	return result
 }
 
 func ServeStatus(w http.ResponseWriter, r *http.Request) {
@@ -214,7 +289,11 @@ func formatImage(src *image.RGBA) template.URL {
 	return ImageAsDataURL(buf.Bytes())
 }
 
-func formatSkyView(ss []gpsd.Satellite) template.URL {
+func formatSkyView(info map[float64]Satellite) template.URL {
+	var ss []gpsd.Satellite
+	for _, s := range info {
+		ss = append(ss, s.Satellite)
+	}
 	if len(ss) == 0 {
 		ss = []gpsd.Satellite{{PRN: 0, Az: 0, El: 0, Ss: 0, Used: false}}
 	}

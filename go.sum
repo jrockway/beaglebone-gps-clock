@@ -45,8 +45,6 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
-github.com/facebookincubator/ntp v0.0.0-20210811125121-43a17d4267ad h1:2br/w4LPu5r1X2NR5eR7ALDS+drwIlyG+n0msyb4R5I=
-github.com/facebookincubator/ntp v0.0.0-20210811125121-43a17d4267ad/go.mod h1:DSm2ybtP2+KSdAX5V3fNZaZUYx9Drjbg53gKir4jyFQ=
 github.com/facebookincubator/ntp v0.0.0-20210907170534-ff372212bf23 h1:zcKAoaLFHJhCkpgbv/8ctMhlIxiG/5j5UOcdItPCWts=
 github.com/facebookincubator/ntp v0.0.0-20210907170534-ff372212bf23/go.mod h1:DSm2ybtP2+KSdAX5V3fNZaZUYx9Drjbg53gKir4jyFQ=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=

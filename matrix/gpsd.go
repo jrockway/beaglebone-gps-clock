@@ -29,24 +29,29 @@ func monitorGpsd(l trace.EventLog) {
 		return
 	}
 	gps.AddFilter("SKY", func(r interface{}) {
+		t := time.Now()
+		sky, ok := r.(*gpsd.SKYReport)
+		if !ok {
+			l.Errorf("not a SKYReport: %#v", r)
+			return
+		}
 		select {
 		case watchdog <- struct{}{}:
 		default:
 		}
-		t := time.Now()
-		sky := r.(*gpsd.SKYReport)
-		buf := new(strings.Builder)
+		l.Printf("sky report: %#v", sky)
 		sort.Slice(sky.Satellites, func(i, j int) bool {
 			return sky.Satellites[i].PRN < sky.Satellites[j].PRN
 		})
-		l.Printf("sky report: %#v", sky)
-		UpdateStatus(Status{Satellites: sky.Satellites})
+
+		buf := new(strings.Builder)
 		for _, s := range sky.Satellites {
 			used := "0u"
 			if s.Used {
 				used = "1u"
 			}
 			buf.WriteString(fmt.Sprintf("satellite,device=%v,prn=%v azimuth=%v,elevation=%v,snr=%v,used=%v %v\n", sky.Device, s.PRN, s.Az, s.El, s.Ss, used, t.UnixNano()))
+			AddSatellite(sky.Device, s)
 		}
 		buf.WriteString(fmt.Sprintf("dop,device=%v xdop=%v,ydop=%v,vdop=%v,tdop=%v,hdop=%v,pdop=%v,gdop=%v %v\n", sky.Device, sky.Xdop, sky.Ydop, sky.Vdop, sky.Tdop, sky.Hdop, sky.Pdop, sky.Gdop, t.UnixNano()))
 		if err := sendToInflux(buf.String()); err != nil {
