@@ -37,7 +37,7 @@
 
                         P9_24_pinmux { status = "disabled"; };
                         P9_26_pinmux { status = "disabled"; };
-                        P9_23_pinmux { status = "disabled"; };			
+                        P9_23_pinmux { status = "disabled"; };
                 };
         };
 
@@ -136,14 +136,14 @@
                                 pinctrl-0 = <&bb_rtc_pps_pins>;
                                 gpios = <&gpio1 18 0>;
                         };
-			
+
 			gps2_pps {
                                 status = "okay";
                                 compatible = "pps-gpio";
                                 pinctrl-names = "default";
                                 pinctrl-0 = <&bb_gps2_pps_pins>;
-                                gpios = <&gpio1 17 0>;			
-			};				
+                                gpios = <&gpio1 17 0>;
+			};
                 };
         };
 
