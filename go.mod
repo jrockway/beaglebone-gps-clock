@@ -8,7 +8,7 @@ require (
 	github.com/goiot/devices v0.0.0-20160708214026-09d1226fc8ea
 	github.com/jrockway/go-gpsd v0.0.0-20210914052111-4bc2d052dcac
 	github.com/jrockway/periphflag v0.0.0-20191020104359-a1cd7211ce99
-	github.com/prometheus/client_golang v1.2.1
+	github.com/prometheus/client_golang v1.11.1
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
@@ -21,13 +21,14 @@ require (
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.1.0 // indirect
-	github.com/golang/protobuf v1.3.2 // indirect
+	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
-	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
-	github.com/prometheus/common v0.7.0 // indirect
-	github.com/prometheus/procfs v0.0.5 // indirect
+	github.com/prometheus/client_model v0.2.0 // indirect
+	github.com/prometheus/common v0.26.0 // indirect
+	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
+	golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40 // indirect
+	google.golang.org/protobuf v1.26.0-rc.1 // indirect
 	periph.io/x/d2xx v0.0.1 // indirect
 )
