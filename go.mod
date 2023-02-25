@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.2.1
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
-	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
+	golang.org/x/net v0.7.0
 	periph.io/x/conn/v3 v3.6.8
 	periph.io/x/devices/v3 v3.6.11
 	periph.io/x/extra v0.0.0-20190805002851-353eec1a00ff
@@ -28,6 +28,6 @@ require (
 	github.com/prometheus/common v0.7.0 // indirect
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
+	golang.org/x/sys v0.5.0 // indirect
 	periph.io/x/d2xx v0.0.1 // indirect
 )
